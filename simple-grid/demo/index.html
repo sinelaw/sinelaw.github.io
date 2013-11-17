@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>simple-grid demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap-theme.min.css">
+
+    <link rel="stylesheet" href="../src/simple-grid.css" />
+</head>
+
+<body ng-app="demo" class="container">
+
+    <script type="text/ng-template" id="simple-grid.html" src="../src/simple-grid.html"></script>
+
+    <h1>Demo for simple-grid directive</h1>
+    <div ng-controller="MainCtrl">
+        <p>
+            Grid options used in this demo:
+            <pre class="pre-scrollable" style="max-height: 200px">{{pretty(gridConfig.options)}}</pre>
+        </p>
+
+        <h2>Prepopulated:</h2>
+        <div simple-grid="gridConfig"></div>
+
+        <h2>Empty:</h2>
+        <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-success" ng-click="gridConfigEmpty.rows.push({})">Add row</button>
+            <button type="button" class="btn btn-sm btn-danger" ng-click="hideDeleted(gridConfigEmpty.rows)">Remove deleted rows</button>
+        </div>
+        <div simple-grid="gridConfigEmpty"></div>
+
+    </div>
+    <script src="bower_components/angular/angular.js"></script>
+    <script src="../src/simple-grid.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
