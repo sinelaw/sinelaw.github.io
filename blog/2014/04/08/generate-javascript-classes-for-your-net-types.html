@@ -1,0 +1,46 @@
+<p>We open-sourced another library: ClosureExterns.NET (on <a href="https://github.com/bdb-opensource/closure-externs-dotnet">github</a> and <a href="http://www.nuget.org/packages/ClosureExterns.NET/">nuget</a>). It generates Javascript classes from .NET-based backend types, to preserve type “safety” (as safe as Javascript gets) across front- and backend. As a bonus you get <a href="https://developers.google.com/closure/compiler/docs/js-for-compiler#types">Google closure annotations</a>. The type annotations are understood by WebStorm (and other editors) and improve your development experience. Also, if you use Google Closure to compile or verify your code, it will take these types into account. We use it extensively with C#. We haven’t tried it with F#, but it’s supposed to work with any .NET type.</p>
+
+<p>ClosureExterns.NET makes it easier to keep your frontend models in sync with your backend. The output is customizable - you can change several aspects of the generated code. For example you can change the constructor function definition, to support inheritance from some other Javascript function. For more details see <a href="https://github.com/bdb-opensource/closure-externs-dotnet/blob/master/ClosureExterns/ClosureExternsOptions.cs">ClosureExternOptions</a>.</p>
+
+<h2 id="getting-started"><a href="https://github.com/bdb-opensource/closure-externs-dotnet#getting-started"></a>Getting Started</h2>
+
+<p>First, install it. Using <strong>nuget</strong>, install the package <a href="http://www.nuget.org/packages/ClosureExterns.NET/">ClosureExterns</a>.</p>
+
+<p>Then, expose a method that generates your externs. For example, a console application:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public static class Program
+{
+    public static void Main()
+    {
+        var types = ClosureExternsGenerator.GetTypesInNamespace(typeof(MyNamespace.MyType));
+        var output = ClosureExternsGenerator.Generate(types);
+        Console.Write(output);
+    }
+}
+</code></pre></div></div>
+
+<p>You can also customize the generation using a <code class="language-plaintext highlighter-rouge">ClosureExternsOptions</code> object.</p>
+
+<h2 id="example-inputoutput"><a href="https://github.com/bdb-opensource/closure-externs-dotnet#example-inputoutput"></a>Example input/output</h2>
+
+<h3 id="input"><a href="https://github.com/bdb-opensource/closure-externs-dotnet#input"></a>Input</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class B
+{
+    public int[] IntArray { get; set; }
+}
+</code></pre></div></div>
+
+<h3 id="output"><a href="https://github.com/bdb-opensource/closure-externs-dotnet#output"></a>Output</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var Types = {};
+
+// ClosureExterns.Tests.ClosureExternsGeneratorTest+B
+/** @constructor
+*/
+Types.B = function() {};
+/** @type {Array.&lt;number&gt;} */
+Types.B.prototype.intArray = null;
+</code></pre></div></div>
+
+<p>For a full example see <a href="https://github.com/bdb-opensource/closure-externs-dotnet/blob/master/ClosureExterns.Tests/ClosureExternsGeneratorTest.cs">the tests</a>.</p>

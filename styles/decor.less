@@ -1,0 +1,112 @@
+
+
+.transform(@transform) {
+    -webkit-transform: @transform;
+    -moz-transform: @transform;
+    -ms-transform: @transform; /* note that you have @trasnform here */
+    -o-transform: @transform;
+    transform: @transform; 
+
+}
+
+.transform-origin(@transform-origin) {
+    -webkit-transform-origin: @transform-origin;
+    -moz-transform-origin: @transform-origin;
+    -ms-transform-origin: @transform-origin; /* note that you have @trasnform here */
+    -o-transform-origin: @transform-origin;
+    transform-origin: @transform-origin; 
+
+}
+
+.animation-delay(@animation-delay) {
+    -webkit-animation-delay: @animation-delay;
+    -moz-animation-delay: @animation-delay;
+    -ms-animation-delay: @animation-delay; /* note that you have @trasnform here */
+    -o-animation-delay: @animation-delay;
+    animation-delay: @animation-delay; 
+
+}
+
+.animation(@animation) {
+    -webkit-animation: @animation;
+    -moz-animation: @animation;
+    -ms-animation: @animation; /* note that you have @trasnform here */
+    -o-animation: @animation;
+    animation: @animation; 
+
+}
+
+
+.deco-header {
+    position: relative;
+    height: 50px;
+    
+}
+.deco-base {
+    position: absolute;
+    z-index: -1;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    & > .deco-rel {
+        position:relative;
+        & > * {
+            position: absolute;
+            border-radius: 100px;
+            width: 20px;
+            height: 20px;
+            //border-width: 2px;
+            //border-style: solid;
+            //border-color:white;
+            box-shadow: 4px 4px 10px 0px #aaa;
+            .animation(time 10s infinite linear);
+            //left: 10px;
+            //top: 10px;
+	    background-color: transparent;//red;
+        }
+
+	.deco-1 {
+	    //.transform-origin(-5px -5px);
+//	    left: 5px;
+	    left: -3px;
+	    top: 3px;
+	    //background-color: red;
+	}
+	.deco-2 {
+	    //.transform-origin(-5px 5px);
+	    left: 3px;
+	    top: -3px;
+	    //background-color: purple;
+	}
+	.deco-3 {
+	    //.transform-origin(5px -5px);
+	    left:3px;
+	    top: 3px;
+	    //background-color: pink;
+	}
+	.deco-4 {
+	    //.transform-origin(5px 5px);
+	    left:-3px;
+	    top: -3px;
+	    //background-color: black;
+	}
+
+    }
+}
+
+
+
+
+@keyframes time {
+    to {
+        .transform(rotate(360deg));
+    }
+}
+
+@-webkit-keyframes time {
+    to {
+        .transform(rotate(360deg));
+    }
+}
+

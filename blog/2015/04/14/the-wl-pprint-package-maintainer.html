@@ -1,0 +1,9 @@
+<p>…is now me.</p>
+
+<p>I’ve talked to the previous maintainer who is no longer interested. There was a small change required to support the new ghc (7.10), so I also released a new version. Since the new version only benefits people who need a new ghc, I also added the <strong>source-repository</strong> field in the cabal file, despite it breaking cabals older than 1.6.</p>
+
+<p>According to hackage, <a href="https://hackage.haskell.org/package/wl-pprint">wl-pprint</a> was authored by <a href="http://research.microsoft.com/en-us/people/daan/">Daan Leijen</a>. The new github repo is up at <a href="https://github.com/sinelaw/wl-pprint">https://github.com/sinelaw/wl-pprint</a>. I’ve taken the liberty of forking based on someone else’s patch for GHC 7.10 - thank you <a href="https://github.com/alexlegg">Alex Legg</a>!</p>
+
+<p>Incidentally, on hackage, there are several packages with the substring ‘wl-pprint’ in their names, some are newer and better maintained and have more features than others. This situation is rather confusing. wl-pprint itself is being used as a dependency by at least one package I need (language-ecmascript).</p>
+
+<p>It would be nice if the community converged on a single Wadler-pretty-printer package. (Probably not wl-pprint - maybe <a href="https://hackage.haskell.org/package/ansi-wl-pprint">ansi-wl-pprint</a>?)</p>

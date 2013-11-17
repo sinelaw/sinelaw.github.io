@@ -1,0 +1,32 @@
+<p>Time and time again, I see people using ‘var’ in the initialization part of a for loop. Example from <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for">MDN (Mozilla Developer Network)</a>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>for (var i = 0; i &lt; 9; i++) {
+   console.log(i);
+   // more statements
+}
+
+</code></pre></div></div>
+
+<p>What’s wrong with <code class="language-plaintext highlighter-rouge">var i = 0</code> above? The problem is that <strong>variables declared in a for initialization have function scope</strong>, just like any <code class="language-plaintext highlighter-rouge">var</code> declaration does. In other words, they affect the scope of the entire function. Consider the following:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function outer() {
+    var x = 'outer';
+    function inner() {
+        x = 'inner';
+        //
+        // ... lots o' code
+        //
+        for (var x = 0; x &lt; 1; x++) {
+            // in for
+        }
+    }
+    inner();
+}
+
+</code></pre></div></div>
+
+<p>In the inner function, <code class="language-plaintext highlighter-rouge">x</code> shadows the outer variable <strong>throughout</strong>, not just inside the for loop. So also the initial statement <code class="language-plaintext highlighter-rouge">x = 'inner'</code> at the head of ‘inner’ affects only the locally scoped variable.</p>
+
+<p>This is a classic example of <strong><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/var#var_hoisting">var hoisting</a></strong>, which should qualify as one of JavaScript’s <a href="http://archive.oreilly.com/pub/a/javascript/excerpts/javascript-good-parts/awful-parts.html">awful parts</a>.</p>
+
+<p><strong>Don’t do it!</strong> Move all your ‘var’ statements to the head of each function, please.</p>

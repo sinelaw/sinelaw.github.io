@@ -1,0 +1,84 @@
+<p><a href="http://noamlewis.wordpress.com/2010/06/10/axiomatic-basis-for-frp/" title="Axiomatic basis for FRP">Last post</a> I proposed a set of (five) properties that every system should have. In following posts I’ll try to refine these properties and perhaps change, add or discard some of them. The comments I got really made me think, so thanks for commenting (keep it up!).</p>
+
+<h2 id="insensitivity">Insensitivity</h2>
+
+<p>The first property I defined, was given the made-up name of “insensitivity”:</p>
+
+<blockquote>
+  <p>If two inputs are almost the same… the output will be <em>(almost?)</em> the same.</p>
+</blockquote>
+
+<p>Here are a few points about it. To make things clearer, let’s define “almost everywhere” as “everywhere except a set of measure zero”.</p>
+
+<p>The reason for not using only continuity conditions on systems was to avoid the various pitfalls encountered by mathematicians as they developed integration and analysis. I’m no mathematician (not even an undergraduate one) but I do know that <a href="http://en.wikipedia.org/wiki/Lebesgue_integration">Lebesgue integration</a> is considered the best (even final) solution to those various problems, and I’m trying to base my systems on this result. A good example is that of the characteristic function of the rationals (also known as <a href="http://mathworld.wolfram.com/DirichletFunction.html">Dirichlet’s function</a>) which equals 1 for rationals and 0 for all other reals. Traditional integration is undefined on such functions - which means that integrals are not total functions. With Lebesgue integration, the issue is solved.</p>
+
+<p>On the other hand, we <em>do</em> want our systems to “behave nicely” and not wildly change their outputs with every small change of input. I’m not talking about changes of the input signal in time - rather, I mean that if we replace the entire input signal with one that is very similar, the output should be similar. I’m still not sure how to cure this problem completely, but the way I defined “insensitivity” ensures that at least for inputs that differ at a <em>very</em> small (“almost nowhere”) subset of time, the output will be the same. I’m not sure, but we may still want to require systems to be continuous (changes in input that are <em>more</em> than “almost nowhere” cause small changes in the output).</p>
+
+<p>This last point brings up the following question, raised by both Derek Elkins and Luke in the comments on that last post. Citing Derek:</p>
+
+<blockquote>
+  <p>…without the “almost” on the output you would disallow the identity “system” which I highly doubt you want to do.</p>
+</blockquote>
+
+<p>The identity system is a good way to bring out the meaning of insensitivity. I do think that the guiding principle should be that “almost identical” <em>signals</em> are considered identical, and in the same spirit “almost identical” <em>systems</em> are also identical. Thus if two systems are the identity system almost everywhere, except for a zero-measure set of different values between the systems, they are still considered the same system. My opinion is that it’s better to not require the existence of a single identity system. Alternatively, we define that every two systems that produce the same output almost everywhere for all inputs, are “equal”.</p>
+
+<p>Note I’ve added the “(almost?)” on the insensitivity requirement on the output (see above). I think I still want to keep that “almost” on the output. The reasoning is twofold. First, for consistency we should make no distinction between output signals that are the same almost everywhere. Secondly, I don’t want to <em>force</em> systems to give exactly the same output when inputs are not exactly the same (not just “almost everywhere”).  I’m not entirely certain about this, though.</p>
+
+<p>In any case I don’t want the “almost” on the output be used as way to process events. Since we consider “almost identical” systems to be equal, such usage is pointless anyway. So what do we do with events?</p>
+
+<h3 id="is-this-an-implementation-thing">Is this an implementation thing?</h3>
+
+<p>No, I’m not requiring insensitivity because the implementation may cause “glitches” in the output (if I understand correctly that was one of Derek’s questions). In fact I’m not considering implementation at all at this point. I’m trying to come up with the basic properties that we would require of systems in an ideal setting.</p>
+
+<h3 id="wait-what-about-events">Wait! What about events?</h3>
+
+<p>Almost all the comments raised this point. Truth is I sort of ignored events when I wrote that post, but I did originally have them in mind (and then forgot about them completely). Since we ignore differences that occur on zero-measured subsets of the input, there is indeed no way to “detect” or differentiate between inputs that contain single-point values. So how do we handle events, or values that occur at single points in time?</p>
+
+<p>Recall that we defined the time domain as an arbitrary ordered, measurable set. Here is where the generality of that definition comes in. If we ignore the idea of signals combining events and continuous values, I think we can solve this. We can try to handle events by defining an appropriate time domain, and allowing systems’ outputs and inputs have a different time domain (unlike the definition I gave in the previous post).</p>
+
+<h4 id="an-attempt-at-defining-event-signals">An attempt at defining event signals</h4>
+
+<p>The following is an attempted definition for event signals. Note that this attempt does not allow simultaneous events (which can be worked around by having compound types for the event values) or combined discrete/continuous time signals. Perhaps these two issues demand direct resolution, but to make progress in the current direction I’m ignoring them.</p>
+
+<p>Let T (the time domain) be a countable set of positively increasing reals signifying event times. It is easy to define an ordering between disjoint interval-type subsets, based on the natural ordering of the reals. For a measure, we can count the number of elements in a subset (the <a href="http://en.wikipedia.org/wiki/Counting_measure">counting measure</a>). A single event (a subset containing one time element) would have measure 1, two events - measure 2, etc.</p>
+
+<p>Thus, an event signal is a function T -&gt; A that maps every element of the time set to an event value. Notice how the T here is necessarily different for each event signal (the times contained in the set are different). I’m not sure it’s bad - we can still define comparisons between event signals. The insensitivity condition in this case, is still valid: T is measurable and every non-empty subset in T has non-zero measure, so no events get “missed” by the insensitivity.</p>
+
+<p>So to summarize, we can handle events by considering a different time domain (a discrete one, essentially) and use an appropriate measure on that domain. It makes sense to allow systems to have outputs with different time-types than the input - for example a “sampling system” takes real time in the input, and outputs in a discrete time. Remember, I’m not talking about how to implement or represent this in Haskell (or otherwise) - I’m just trying to define the desired model in an ideal setting.</p>
+
+<h4 id="delta-functions">Delta functions</h4>
+
+<p>Some (including myself) have suggested to use something akin to <a href="http://en.wikipedia.org/wiki/Dirac%27s_delta_function">Dirac’s delta function</a> (which isn’t a function, but a measure or a distribution) to represent events on real, continuous time. Adequate discussion is too long for this post. My guess is that since these “mathematical constructs” are not functions of time at all, and since they are originally used as measures, we will more or less need to re-invent them for our wider context.</p>
+
+<p>One way to define the delta is given here. The <em>δ</em> function is an operator that takes a “test function” <em>f</em> of time, and then for any given time interval (or more generally, a subset of time) has one of two values. So &lt;δ,f&gt; on U where U is a subset of R, is:</p>
+
+<ul>
+  <li>If U contains the origin (0 is zero in this font), the value is <em>f(0)</em>.</li>
+  <li>Otherwise, the value is 0.</li>
+</ul>
+
+<p>The delta can be shifted to obtain the same on points other than the origin. Essentially, the delta function tells us whether the given subset of time contains a particular point, and then evaluates to either a default value (0) or the value of the given function at that point. The sum of two non-overlapping deltas is one which yields the value of the test function at <em>two</em> points, etc.</p>
+
+<p><strong>EDIT: The following definition is flawed. I correct it in the first comment.</strong></p>
+
+<p>An equivalent construct in our context is an operator that takes a subset of time and maps it to an event value (“Just x”) if the event has occurred within that subset. Otherwise, it maps it onto “Nothing”. We can then define “sums” (or more appropriately, <em>mappend</em>) of two of these operators: map to each of the preceding values if each event has occurred in the given time subset, just like the sum of two deltas. For completeness we must also deal with combination of simultaneous events, and maybe also with the question of how to define a system that can work with both these and plain functions of time.</p>
+
+<p>If we follow this plan, it’s easy to see that using sums of deltas (“<a href="http://en.wikipedia.org/wiki/Dirac_comb">impulse train</a>”) to define event streams resembles the definition of events as functions from real time to <em>Maybe a</em>. This possibility has been suggested previously and I’m sure it’s been discussed by FRP proponents - I’d like to know what conclusions or arguments were raised in this regard (<strong>enlighten me if you know</strong>).</p>
+
+<p>However, the delta approach is not exactly the same as functions from time to <em>Maybe.</em> They are operators that take test functions and produce these <em>Maybe</em> total functions. The type can be written as (this is not really Haskell notation):</p>
+
+<p><code class="language-plaintext highlighter-rouge">delta : (T -&gt; A) -&gt; T -&gt; (U -&gt; Maybe A)</code></p>
+
+<p>Where U is the set of subsets of T, the first argument is the test function, the second argument is the time shift of the delta - the location of the event value, and the result is a function that yields <em>Nothing</em> everywhere except for subsets of time that happen to contain the shift value.</p>
+
+<p>An event stream using this definition of delta would be a function from <em>subsets of time</em> (not from time values) to <em>Maybe a</em>. To incorporate these events in our model we’ll need can try different approaches. One way is to change the definition of a system to take inputs of this type (subsets of time → <em>Maybe a</em>), and to output a similar type. The only way I see to define the regular continuous time signals in this model is:</p>
+
+<p><code class="language-plaintext highlighter-rouge">f : U -&gt; Maybe (T -&gt; A)</code></p>
+
+<p>Where again U is the set of subsets of time. That is, for every <em>subset of</em> time, the function yields a <em>function of</em> time that gives the value of the signal at each point in the subset.</p>
+
+<p>There is surely more to explore in the delta direction, but for now that’s all I can think of.</p>
+
+<h1 id="conclusions">Conclusions</h1>
+
+<p>The idea of a measurable time domain apparently makes it possible to define both continuous and discrete timed signals and systems at once. In addition we explored the alternative route of using delta functions. The first approach (based on measurable time) for events seems simpler and more straightforward than the delta function approach. Maybe there’s a simpler formulation that uses the delta approach and incorporates also regular signals in one general definition.</p>

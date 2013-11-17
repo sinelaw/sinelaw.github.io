@@ -1,0 +1,35 @@
+<p>TL;DR - check out <a href="https://github.com/sinelaw/elfs-clang-plugins">elfs-clang-plugins, cool plugins for clang</a> made at <a href="https://www.elastifile.com/">elastifile</a>.</p>
+
+<p>Have you ever made the mistake of returning a bool instead of an enum?</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>enum Result do_something(void) {
+    ...
+    return true;
+}
+</code></pre></div></div>
+
+<p>In C that’s valid (in C++ you can use ‘class enum’ to avoid it, but if you didn’t you’d have the same problem).</p>
+
+<p>No compiler that I know of warns about this C code. One of our newly-open-sourced clang plugins, flags this (and many other) enum-related mistakes:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>clang -Xclang -load -Xclang ./clang_plugins.so \
+      -Xclang -add-plugin -Xclang enums_conversion \
+      -c /tmp/test.c
+/tmp/test.c:7:12: error: enum conversion to or from enum Result
+    return true;
+           ^
+1 error generated.
+</code></pre></div></div>
+
+<p>The package includes:</p>
+
+<ul>
+  <li>enums_conversion: Finds implicit casts to/from enums and integral types</li>
+  <li>include_cleaner: Finds unused #includes</li>
+  <li>large_assignment: Finds large copies in assignments and initializations (size is configurable)</li>
+  <li>private: Prevents access to fields of structs that are defined in private.h files</li>
+</ul>
+
+<p>More information at https://github.com/sinelaw/elfs-clang-plugins</p>
+
+<p>Because C is… not so safe.</p>

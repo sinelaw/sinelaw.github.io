@@ -1,0 +1,24 @@
+<p>To prevent possible name clashes, the name of my type inference engine for JavaScript is now <a href="https://github.com/sinelaw/inferny">Inferny <strong>Infernu</strong></a> . I hope I don’t have to change the name again!</p>
+
+<p>In other news, here is some recent progress:</p>
+
+<h3 id="new-now-requires-this-to-be-a-row-type">‘new’ now requires ‘this’ to be a row type</h3>
+
+<p>I changed inference of ‘new’ calls, so that the constructed function must have a row type as it’s “this” implicit parameter (nothing else makes sense).</p>
+
+<p>The change to “new” typing made it possible to define the built in String, Number, Boolean type coercion functions in a way that disallows constructing them (e.g. “new String(3)”) which is considered bad practice in JavaScript. The reason is that the constructed values are “boxed” (kind of) so that they don’t equate by reference as normal strings, booleans and numbers do. For example, <code class="language-plaintext highlighter-rouge">new String(3) == '3'</code> but at the same time, <code class="language-plaintext highlighter-rouge">new String(3) !== '3'.</code></p>
+
+<h3 id="ambiguous-types">Ambiguous Types</h3>
+
+<p>I added an initial implementation of what I call ambiguous types. These are simple type constraints that limit a type variable to a set of specific types.</p>
+
+<p>The motivation for type constraints is that some JavaScript operators make sense for certain types, but not all types. So having a fully polymorphic type variable would be too weak. For example, the <strong>+</strong> operator has weird outputs when using all sorts of different input types (NaNNaNNaNNaNNaNNaN….batman!). I would like to constrain + to work only between strings or between numbers.</p>
+
+<p>With the new type constraints, + has the following type:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a = (TNumber | TString) =&gt; ((a, a) -&gt; a)
+</code></pre></div></div>
+
+<p>The syntax is reminiscent of Haskell’s type classes, and means: given a type variable “a” that is either a <code class="language-plaintext highlighter-rouge">TNumber</code> or a <code class="language-plaintext highlighter-rouge">TString</code>, the type of + is: <code class="language-plaintext highlighter-rouge">(a, a) -&gt; a</code></p>
+
+<p>I’m thinking about implementing full-blown type classes, or alternatively, a more powerful form of ambiguous types, to deal with some other more complicated examples.</p>

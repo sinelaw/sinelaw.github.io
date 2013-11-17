@@ -1,0 +1,56 @@
+<p>After <a href="http://conal.net/blog/posts/garbage-collecting-the-semantics-of-frp/" title="Conal's blog post">Conal’s blog post</a>, I’ve been thinking about possible models of FRP that satisfy the “no arbitrary time access” restriction. Normally, we restrict models of time-dependent systems to causality: we disallow access to future values. The extended restriction here is about not allowing us to sample time-dependent values at any point we choose, even in the past.</p>
+
+<p>We can’t arbitrarily check what a sensor input was at any point in the past. We can only tell what it is <em>right now</em>, in the present. Alternatively, we can store some information about a sensor’s input as time goes by, and later probe the store information to answer questions about the past. But one thing is clear: we are limited in what we can know about a past event, because our memory doesn’t perfectly describe reality and it also must be finite. We can call this “point-wise time access”, or maybe a better name would be “real time access”.</p>
+
+<p>But if we can access only the current time, how is it possible to perform things such as integration, that seem to require knowledge of the value at least at a finite time interval? Obviously the way we do it is by accumulating the sum, not by remembering what the value was at every time instant and later summing those.</p>
+
+<p>As a result of that idea and a few others, I wrote the <a href="http://www.ee.bgu.ac.il/~noamle/_downloads/gaccum.pdf" title="Behavioral Amnesia">short report titled “Behavioral Amnesia”</a>. I’d be glad to hear feedback. It discusses also other various related points.</p>
+
+<p>In short, the only new (to me) idea in there is that we <em>can</em> build a model that is point-wise (disallows arbitrary access in time) but still allows memory. One way to do so is to define a generalized operator that scans over time, I call it <em>scanlT</em>, and it works like this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>scanlT :: (a -&gt; a -&gt; DTime -&gt; b -&gt; b) -&gt; [(Time,a)] -&gt; [(Time,b)]
+scanlT f y xs = scanl f' y xs'
+  where f' ((t1,x1),(t2,x2)) = f x1 x2 (t2-t1)
+        xs' = zip xs (tail xs)
+
+</code></pre></div></div>
+
+<p>Where the lists of (Time,a) and (Time,b) pairs are the time-dependent input and output values, respectively. The first argument, the function, performs the memory-full calculation. The implementation, and even the type-signature, live in the semantic domain - they describe what the model is, not how it is to be implemented.</p>
+
+<p>If the time-dependent values are defined as lists, what about continuous time? The report describes a (admittedly naive) way to tackle the problem: the continuous version of <em>scanlT</em> is the limit on <em>scanlT</em> applied to the list of samples of the continuous input, where the limit is on the sampling rate going to infinity. I’m sure there are alternative, perhaps more general formulations - but this one suffices for me, at the present. One implication of the sampling representation is that the input must satisfy certain conditions (and if I’m correct, mainly that they be L2-integrable).</p>
+
+<p>With <em>scanlT</em> defined it’s possible to work out integration:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>integrate :: Fractional a =&gt; Temporal a -&gt; Temporal a
+integrate = scanlT psum 0
+   where psum y1 y2 dt s = s + dt*(y1 + y2)/2
+
+</code></pre></div></div>
+
+<p>Where “Temporal a” is the yet-to-be-defined type of continuous time-dependent values. Note that there are many different formulations possible, because <em>psum</em> is not really trapezoidal approximation - remember that <em>scanlT</em> is taken at the limit of <em>dt</em> going to zero. Also note that obviously a real formulation of integrals would be defined for the most general type - probably vector spaces, measurable spaces or the such (excuse my sketchy math knowledge).</p>
+
+<p>As far as I know, all publicized FRP formulations to date have used integrals as built-in primitives <strong>(correct me if I’m wrong!).</strong> The idea I’m trying to push is that there should be nothing magic or special about integration or even general accumulation. What we want is a general way to implement realistic, non-arbitrary-time, memory.</p>
+
+<p>We can also define differentiation. Differentiation is weaker in that it is local, it doesn’t really need to know much about history to tell you the current value (note the _ in the definition):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>differentiate :: Fractional a =&gt; Temporal a -&gt; Temporal a
+differentiate = scanlT pdiff 0
+   where pdiff y1 y2 dt _ = (y2-y1) / dt
+
+</code></pre></div></div>
+
+<p>It’s fun to verify that <em>pdiff</em> and <em>psum</em> are inverses of each other, when you take the limit.</p>
+
+<p>Finally, we can even implement maximum (or minimum). I use the imaginary typeclass “<em>MinBounded</em>” that contains the value <em>MinBound</em>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>maximum :: (Ord a, MinBounded a) =&gt; Temporal a -&gt; Temporal a
+maximum = scanlT pmax MinBound
+   where pmax _ y2 _ m = max m y2
+
+</code></pre></div></div>
+
+<p>That’s basically the idea, I’d love to hear comments. The <a href="http://www.ee.bgu.ac.il/%7Enoamle/_downloads/gaccum.pdf" title="Behavioral Amensia">report</a> I wrote contains more discussion, but is currently slightly outdated only with respect to the function definitions I just gave.</p>
+
+<p>In the next part I’ll describe one possible model for FRP that uses this as its basis.</p>
+
+<p>Lastly, comments are welcome!</p>

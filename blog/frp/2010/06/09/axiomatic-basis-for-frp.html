@@ -1,0 +1,59 @@
+<h1 id="whats-this-about">What’s this about?</h1>
+
+<p>I’ve been thinking about ways to lay firm, logical foundations for a model of FRP. Rather than trying to cook up the “next best thing”, we should perhaps review what we really want and try to infer what we need. Unfortunately I’ve very little time to think about this and I’ve hardly discussed this. Hopefully this blog post will give my effort another small push.</p>
+
+<h1 id="goal">Goal</h1>
+
+<p>The idea is to define a set of building blocks that allow one to express only systems that satisfy a few basic properties. Specifically we want systems that <em>don’t</em> satisfy these properties, to be inexpressible within our model. It makes sense to start by defining the properties we want to satisfy, and then to try and deduce the most general model that satisfies them and only them.</p>
+
+<p>The basic concept is that of a “system”, which we define as a function:</p>
+
+<p><code class="language-plaintext highlighter-rouge">f :: (T -&gt; A) -&gt; (T -&gt; B)</code></p>
+
+<p>Where <em>T</em> is an ordered, measurable set, usually denoting time. This is what Conal Elliott called an “<a href="http://conal.net/blog/posts/why-classic-FRP-does-not-fit-interactive-behavior/" title="interactive behavior">interactive behavior</a>”, and what is known in Yampa as a “signal function”. I use the term “system” because that’s how this is called in engineering, and I see no reason to invent new names.</p>
+
+<h1 id="desired-properties-of-systems">Desired properties of systems</h1>
+
+<p><strong>Edit: the properties as defined below are not <em>exactly</em> what we want. See comments for discussion.</strong></p>
+
+<p>So, here are the requirements I’d like to propose. Every expressible system must satisfy the following:</p>
+
+<ol>
+  <li><strong>Insensitivity:</strong> If two inputs are almost the same (differ at most at a set of measure zero), the output will be <em>(almost?)</em> the same.</li>
+  <li><strong>Causality</strong>: For all t in T, output(t) can only depend on input(t-s) where <em>s ≥ 0</em>. Meaning, for every two inputs x1, x2 that have the same past, the output for the present is the same. And to be more precise, for every <em>t</em>, if <em>x1(t-s) = x2(t-s)</em> for almost all <em>s ≥ 0</em>, the output at <em>t</em> will be the same.</li>
+  <li>
+    <table>
+      <tbody>
+        <tr>
+          <td><strong>Markovity:</strong> Same as (2), but with the condition that _</td>
+          <td>s</td>
+          <td>&lt; ∞_. In words, the output does not depend on inputs from the infinitely remote past or future.</td>
+        </tr>
+      </tbody>
+    </table>
+  </li>
+  <li><strong>Finite memory:</strong> given the current input (a single value), the current output depends additionally at most on a finite-length binary string (that may have been computed from past inputs).</li>
+  <li><strong>Time invariance</strong> (<em>optional</em>): If <em>x(t)</em> produces output <em>y(t)</em>, then <em>x(t - s)</em> produces output <em>y(t - s)</em>.</li>
+</ol>
+
+<h2 id="discussion">Discussion</h2>
+
+<p>The first property means that the system is not overly sensitive. Integration is one example of a system that satisfies this property: changing the value of a function at finite number of points does not affect the value of its integral. I don’t know how to call this - if anyone knows a name for this property, please tell me. For now I’ll call it <em>insensitivity</em>.</p>
+
+<p>The second property is <em>causality.</em> It stems from the physical intuition that we can’t know the future, and every value that we  (or our systems, or any other natural thing) compute at the present, should depend only on inputs from the past (or at most, the present). Otherwise, we’d have to wait until the future “arrives” to complete the computation.</p>
+
+<p>Causality is one of the properties that are easily violated if we consider a model that allows us to arbitrarily sample our input, one that allows us to actually treat the input as a function of time. Mathematically, a function is just a mapping and has no rules regarding which part of the domain can be evaluated and when. So, the first realization from our requirements is that we can’t  have signals (inputs, outputs, etc.) as directly accessible values in our model, or that they shouldn’t be modeled as functions. Yampa (or in it’s other name, AFRP) imposes the no-access rule and doesn’t have signals as values that can be passed around. Instead, they are indirectly manipulated by constructing systems that transform them - a sort of “wiring up”. There’s a big debate on the pros and cons of an Arrow-based FRP, but I’ve yet to understand the full consequences.</p>
+
+<p>As for a non-functional description of signals, I haven’t though about it enough to know if there’s any obviously useful alternative that solves the causality problem. So in my case, I choose to go the Yampa way - I won’t provide any means to access signals directly.</p>
+
+<p>Besides causality, we also want to make sure the system does not depend on the infinitely remote past. Physical intuition says that we’ll never be able to know what happened that far back. This is the defining property of Markov processes (of any order), so I’ll call this <em>Markovity</em>. Note that the requirement is defined as going both ways, but our previous demand for causality means that it only has meaning regarding past inputs. Perhaps the more general formulation (that includes both past and future) is redundant, but to me it seems nicer to have it symmetric even though only one direction (past) matters in our case.</p>
+
+<p>The fourth property is <em>finite memory</em>, which is physically intuitive. Especially in the context of computers, we don’t want our systems to endlessly accumulate information until we run out of memory. Mathematically, this requirement needs elaboration to be made precise. The formulation I’ve given above (depending on a finite-length binary string) is simple and describes what I want, but it will require extra work to figure out what implications it has on our systems.</p>
+
+<p>Finally, <em>time invariance</em> can be interpreted as not being able to tell the absolute “wall clock” time. Physically this is true: we don’t know about any absolute time. Although in reality engineered systems do in fact evolve over time (wear and tear, for one) it is not some intrinsic property of the system that causes this change - rather it is that the entire observable universe serves as inputs to our systems, which can never be fully isolated. Thus the only thing that should matter for our system’s output is how the input evolves over time, not the exact position in global time of the input. We forbid sensitivity to input time shifts. I noted this requirement as optional because I’m not sure we really want it as a limitation. I do have a gut feeling that we don’t miss out any desirable systems by adding this limitation - please correct me if you have any ideas against this.</p>
+
+<h1 id="whats-next">What’s next?</h1>
+
+<p>In this blog post I’ve identified the five basic properties that we desire in a system. The next step should be to define a set of operations that can serve as universal building blocks for any system that satisfies the requirements. Perhaps more importantly, our building blocks should <em>prevent</em> us from accidentally expressing systems that violate the requirements. I’ll even say that it’s ok if a few valid systems are inexpressible (our “systems filter” has false positives) as long as no violating system is expressible (no false negatives).</p>
+
+<p>I’m waiting for your comments.</p>

@@ -1,0 +1,161 @@
+<p>Imagine a language, where all we have are strings and numbers, and where + is a built-in function that can either add numbers or concatenate strings. Consider the following code:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a + b
+
+</code></pre></div></div>
+
+<p>What are the types of <code class="language-plaintext highlighter-rouge">a</code>, <code class="language-plaintext highlighter-rouge">b</code> and <code class="language-plaintext highlighter-rouge">+</code>?</p>
+
+<p>Using a Haskell-like type signature we can say that + has either of these types: <code class="language-plaintext highlighter-rouge">+ :: (Number, Number) -&gt; Number</code> or <code class="language-plaintext highlighter-rouge">+ :: (String, String) -&gt; String</code> (Currying avoided intentionally.)</p>
+
+<p>This is a classic case of ad-hoc polymorphism. With type classes one could say:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class Plus a where
+  (+) :: (a, a) -&gt; a
+
+instance Plus Number where
+  x + y = ... implement addition ...
+
+instance Plus String where
+  x + y = ... implement string concatenation ...
+
+</code></pre></div></div>
+
+<p>That’s great! Now we can type our <code class="language-plaintext highlighter-rouge">a + b</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a + b :: Plus t =&gt; t
+
+</code></pre></div></div>
+
+<p>Where <code class="language-plaintext highlighter-rouge">a :: t</code> and <code class="language-plaintext highlighter-rouge">b :: t</code>.</p>
+
+<p>Yes, there are also Scala-style implicits (<a href="http://www.reddit.com/r/ocaml/comments/2vyk10/modular_implicits/">recently discussed here</a> in a proposal for OCaml), and probably other solutions I’m less aware of.</p>
+
+<p>Notice that in the + example, a constraint on a <strong>single type</strong> (expressed through type class requirements) was enough to solve the problem.</p>
+
+<h3 id="constraints-on-multiple-types">Constraints on multiple types</h3>
+
+<p>Now, let’s look at a more complicated problem, involving multiple types at once.</p>
+
+<p>Consider a language with only parameterized lists <code class="language-plaintext highlighter-rouge">[a]</code> and maps from strings to some type, <code class="language-plaintext highlighter-rouge">Map a</code>. Now, throw in a terribly ambiguous syntax where brackets denote either accessing a list at some index, or accessing a map at some key (<em>wat</em>):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   x[i]
+
+</code></pre></div></div>
+
+<p>That syntax means “access the container x at index/key i”. Now, what are the types of <code class="language-plaintext highlighter-rouge">x</code>, <code class="language-plaintext highlighter-rouge">i</code> and the brackets? There are two possibilities: if <code class="language-plaintext highlighter-rouge">x</code> is an array, then <code class="language-plaintext highlighter-rouge">i</code> must be a number; otherwise if <code class="language-plaintext highlighter-rouge">x</code> is a map, then <code class="language-plaintext highlighter-rouge">i</code> is a string.</p>
+
+<p><a href="https://wiki.haskell.org/GHC/Type_families">Type families</a> can be used to encode the above constraints:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class Indexable a where
+  type Index a
+  type Result a
+  atIndex :: (a, Index a) -&gt; Result a
+
+</code></pre></div></div>
+
+<p>The syntax means that any instance of the type class <code class="language-plaintext highlighter-rouge">Indexable a</code> “comes with” two accompanying types, <code class="language-plaintext highlighter-rouge">Index a</code> and <code class="language-plaintext highlighter-rouge">Result a</code> which are uniquely determined by the appropriate choice of <code class="language-plaintext highlighter-rouge">a</code>. For [t], Index = Number and Result = t. For Map t, Index = String and Result = t.</p>
+
+<p>Now we just need syntax sugar where <code class="language-plaintext highlighter-rouge">x[i] = x `atIndex` i</code>. We could then define instances for our two types, [a] and Map a (remember, in our language the map keys are always Strings):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>instance Indexable [a] where
+  type Index [a] = Number
+  type Result [a] = a
+  atIndex = ... implement list lookup by index ...
+
+instance Indexable (Map a) where
+  type Index (Map String a) = String
+  type Result (Map String a) = a
+  atIndex = ... implement map lookup by key ...
+
+</code></pre></div></div>
+
+<p>Nice. Now, to type our original expression <code class="language-plaintext highlighter-rouge">x[i]</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>x[i] :: Indexable a =&gt; Result a
+
+</code></pre></div></div>
+
+<p>Where <code class="language-plaintext highlighter-rouge">x :: a</code> and <code class="language-plaintext highlighter-rouge">i :: Index a</code>.</p>
+
+<p>Great! Type families (or rather, “type dependencies”) provide a way to represent inter-type constraints and can be used to resolve ambiguous expressions during type inference. (I’ve heard that type families are equivalent to functional dependencies or even GADTs for some value of “equivalent” , maybe where “equivalent = not equivalent at all”, but that’s off-topic.) See also <a href="https://gist.github.com/sinelaw/a4a035a5bb6b0d6d6c1c">a valid Haskell implementation of the above example</a> (thanks to Eyal Lotem).</p>
+
+<p>I don’t know if Scala-style implicits can be used to such effect - let me know if you do.</p>
+
+<h3 id="ambiguous-types">Ambiguous Types</h3>
+
+<p>Now, here’s an altogether different way to approach the ad-hoc polymorphism problem. This was my idea for a solution to ad-hoc polymorphism with inter-type constraints, before I realized type families could do that too.</p>
+
+<p>Define an “ambiguous type” as a type that represents a disjunction between a set of known types. For example, for + we could say:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+ :: (a = (String | Number)) =&gt; (a, a) -&gt; a
+
+</code></pre></div></div>
+
+<p>The type variable <code class="language-plaintext highlighter-rouge">a</code> is constrained to be either a String or a Number, explicitly, without a type class. I see two main differences with type classes, from a <strong>usage</strong> point of view. First, this type is closed: because there is now class, you can’t define new instances. It must be a Number or a String. Second, you don’t need to add + to some class, and if we have more operators that require a similar constiant, or even user-defined functions that require some kind of ad-hoc constraint, we don’t need to define a type class and add functions/operators to it. Lastly, the type is straightforward, and is easier to explain to people familiar with types but not with type classes.</p>
+
+<p>By the way, I have no idea (yet) if this leads to a sound type system.</p>
+
+<h4 id="ambiguous-types-involving-multiple-type-variables">Ambiguous types involving multiple type variables</h4>
+
+<table>
+  <tbody>
+    <tr>
+      <td>Let’s continue to our more complicated, ambiguous “atIndex” function that can either index into lists (using a number) or into maps (using a string). A simple disjunction (or,</td>
+      <td>) is not enough: we must express the dependencies between the container type and the index type. To that end we add conjunctions (and, &amp;) so we can express arbitrary predicates on types, such as <code class="language-plaintext highlighter-rouge">(t &amp; s) | u</code>. The type of atIndex will now be:</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>atIndex :: (a = [t] &amp; i = Number) | (a = Map t &amp; i = String) =&gt; a -&gt; i -&gt; t
+
+</code></pre></div></div>
+
+<p>This definitely does the job. Is it sound? Will it blend? I don’t know (yet).</p>
+
+<p>The main drawback of this system is the combinatorial explosion of the predicate when combining ambiguous (overloaded) functions, such as in the following program:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>x[i] + y[j]
+
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">x</code> could be either a list or map of either numbers or strings, and so can <code class="language-plaintext highlighter-rouge">y</code>, so <code class="language-plaintext highlighter-rouge">i</code> and <code class="language-plaintext highlighter-rouge">j</code> can be either numbers or strings (to index into the lists or maps). We quickly get to a very large predicate expression, that is slow to analyze and more importantly, very hard to read and understand.</p>
+
+<p>Nevertheless, I implemented it.</p>
+
+<h3 id="implementing-ambiguous-types">Implementing ambiguous types</h3>
+
+<p><a href="https://github.com/sinelaw/infernu">Infernu</a> is a type inference engine for JavaScript. All of the examples described above are “features” of the JavaScript language. One of the goals of Infernu is to infer the safest most general type. JS expressions such as <code class="language-plaintext highlighter-rouge">x[i] + d</code> should be allowed to be used in a way that makes sense. To preserve safety, Infernu doesn’t allow implicit coercions anywhere, including in +, or when indexing into a map (JS objects can act as string-keyed maps). To retain a pseudo-dynamic behavior safely, polymorphism with fancy type constraints as discussed above are required.</p>
+
+<p>To properly implement ambiguous types I had to solve a bunch of implementation problems, such as:</p>
+
+<ol>
+  <li>How to unify two types that have constraints on them? The problem is of finding the intersection of two arbitrary boolean expressions. My solution was to convert both equations to <a href="http://en.wikipedia.org/wiki/Disjunctive_normal_form">DNF</a>, which is just a big top-level OR between many AND (conjunction) expressions (and no further OR or ANDs). Then compare every combination pair of conjunctions and rule out ones that don’t match. The surviving set of conjunctions is used to build a new DNF expression.</li>
+  <li>How to simplify the resulting predicate? While an <a href="http://en.wikipedia.org/wiki/Quine%E2%80%93McCluskey_algorithm">optimal solution</a> exists, it is NP-hard, and more importantly, I was too lazy to implement it. Instead I ended up using a heuristic constructive approach where while building expressions, I try to find patterns that can be simplified.</li>
+  <li>A software engineering challenge: when building the constraint unifier, how to design an API that allows effectful unification at the leaf nodes when we are testing conjunctions? I ended up using some Applicative/Traversable magic (but the code isn’t pretty). Rumor has it that lenses may make it much nicer.</li>
+  <li>How to represent constraints in the types AST? I followed what is allegedly GHC’s approach by defining a wrapper data type, which wraps a type with an accompanying predicate, something like: <code class="language-plaintext highlighter-rouge">data QualType t = QualType (Pred t) (Type t)</code>. Then, the unification function is left unchanged: when doing inference, I also call the constraint unifier separately, using its result to “annotate” the inferred type with a constraint predicate.</li>
+</ol>
+
+<h2 id="conclusions">Conclusions</h2>
+
+<p>Apparently, the ambiguous types are not a good solution due to the complex type signatures. I’ll either leave the ambiguous types in (having already implemented them) or just get rid of them and implement type families, which will require another crusade on my code.</p>
+
+<p>I’m still thinking about whether or not type families cover all cases that my ambiguous types can. One example is the “type guard” pattern common in JavaScript:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if (typeof obj == 'string') {
+    .. here obj should be treated as a string! ...
+}
+
+</code></pre></div></div>
+
+<p>Can ambiguous types and type families both be used coherently to implement compile-type checking inside type guards? (Haven’t given it much thought - so far I think yes for both.)</p>
+
+<p>Also, since ambiguous types are closed, they may offer some features that type families can’t, such as warnings about invalid or incomplete guards, which can be seen as type pattern matching. Maybe closed type families are a solution: I don’t know much about them yet.</p>
+
+<p>I also don’t know if ambiguous types lead to a sound type system or are there pitfalls I haven’t considered. Remember that these ambiguous types may also interact with many features: parameteric polymorphism, row-type polymorphism, the requirement for prinicpal types and full type inference without annotations, etc.</p>
+
+<p>Lastly, I’ve probably re-invented the wheel and somebody has written a bunch of papers in 1932, and there’s some well-accepted wisdom I’ve somehow missed.</p>
+
+<h3 id="acknowledgement">Acknowledgement</h3>
+
+<p>Thanks to Eyal Lotem for a short, but very fruitful conversation where he showed me how type families may obsolete my idea.</p>

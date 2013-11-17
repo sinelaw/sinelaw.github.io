@@ -1,0 +1,20 @@
+{
+  "name": "sinelaw.github.io",
+  "version": "0.0.0",
+  "homepage": "https://github.com/sinelaw/sinelaw.github.io",
+  "authors": [
+    "Noam Lewis <noam.lewis@elastifile.com>"
+  ],
+  "license": "Proprietary",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "devDependencies": {
+    "bootstrap": "~3.3.1"
+  }
+}

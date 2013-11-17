@@ -1,0 +1,1 @@
+../node_modules/.bin/lessc main.less > main.less.css

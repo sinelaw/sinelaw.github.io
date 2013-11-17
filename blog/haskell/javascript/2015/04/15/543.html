@@ -1,0 +1,150 @@
+<p>Compared to other tools adding static types to JavaScript, <a href="https://github.com/sinelaw/infernu">Infernu’s</a> main strengths are <strong>full type inference</strong> and <strong>strong type safety</strong>. Here are a few examples.</p>
+
+<h1 id="identity-function">Identity Function</h1>
+
+<p>Here is the simplest possible function:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function id(x) {
+  return x;
+}
+</code></pre></div></div>
+
+<h2 id="typescript">TypeScript</h2>
+
+<p><a href="http://www.typescriptlang.org">TypeScript</a>’s compiler <code class="language-plaintext highlighter-rouge">tsc</code> can generate a <code class="language-plaintext highlighter-rouge">.d.ts</code> from that:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>declare function id(x: any): any;
+</code></pre></div></div>
+
+<p>That’s no good! We can pass <code class="language-plaintext highlighter-rouge">any</code> type we want to our function, but the return type is not tied to the argument type - it is treated as anything, basically untyped. So we can do this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var n = 'hi'; n = id(5);
+</code></pre></div></div>
+
+<p>And TypeScript will output the following <code class="language-plaintext highlighter-rouge">.d.ts</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>declare var n: string;
+</code></pre></div></div>
+
+<p>That seems wrong: n is assigned a number via <code class="language-plaintext highlighter-rouge">id(5)</code>. But wait - there is a way to turn off inference of <code class="language-plaintext highlighter-rouge">any</code> types (with <code class="language-plaintext highlighter-rouge">--noImplicitAny</code>). If we try that on our identity function, we get:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>id.ts(1,13): error TS7006: Parameter 'x' implicitly has an 'any' type.
+</code></pre></div></div>
+
+<h3 id="explicit-generics">Explicit Generics</h3>
+
+<p>Oops. Ok, but TypeScript has generics! Let’s try <em>that</em>: the <a href="http://www.typescriptlang.org/Handbook#generics-hello-world-of-generics">TypeScript handbook</a> gives exactly the example we need - we just <strong>write the type out explicitly</strong>, like so:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function identity&lt;T&gt;(arg: T): T {
+    return arg;
+}
+</code></pre></div></div>
+
+<p>Great! We got what we needed, but without type inference.</p>
+
+<h2 id="flow">Flow</h2>
+
+<p>Facebook’s <a href="http://flowtype.org/">Flow</a> has a type system that’s (slightly?) different from TypeScript’s, and apparently works differently. Let’s try it. We can use the <code class="language-plaintext highlighter-rouge">flow suggest</code> command to get suggested typing (I’m using version 0.7). Here’s what we get for a single file containing only the identity function above: nothing. It doesn’t suggest any type. Ok, let’s try using our <code class="language-plaintext highlighter-rouge">id</code> in a way that makes no sense, to induce an error (after all, type checkers are used to find errors). Here’s <code class="language-plaintext highlighter-rouge">bad_id.js</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* @flow */
+function id(x) { return x;}
+var n = 'hi'; n = id(5);
+var z = n; // added so we can see what flow says the type of n is here.
+
+</code></pre></div></div>
+
+<p>(Note: The <code class="language-plaintext highlighter-rouge">/* @flow */</code> header is used to tell flow that it should look at this file.) Run <code class="language-plaintext highlighter-rouge">flow suggest bad_id.js</code> and you get a diff-style output. I’ve ‘applied’ it to make it easier to read - here’s what flow suggests:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function id(x: number) : number{ return x;}
+var n: string | number = 'hi'; n = id(5);
+var z: number = n;
+
+</code></pre></div></div>
+
+<p>Interesting! We managed to get something without reverting to explicit type annotations. But we didn’t get an error!</p>
+
+<p>First, <code class="language-plaintext highlighter-rouge">id</code> was inferred to take and return <code class="language-plaintext highlighter-rouge">number</code>, apparently because that’s the only way we’ve used it. It would be interesting to see what happens when we use <code class="language-plaintext highlighter-rouge">id</code> several times with different types - we’ll try that soon.</p>
+
+<p>Second, <code class="language-plaintext highlighter-rouge">n</code> was given a union type <code class="language-plaintext highlighter-rouge">string | number</code>, because it takes on both types during its lifetime. It may be a matter of taste, but <strong>I would rather not have the type checker deduce implicit union types</strong> in this case (<code class="language-plaintext highlighter-rouge">n = 'hi'; n = 5;</code>) - instead I would expect that to be an error.</p>
+
+<p>The unique (and impressive) part is that flow is able to tell that <code class="language-plaintext highlighter-rouge">z</code> is only ever going to have <code class="language-plaintext highlighter-rouge">number</code> values, and so it’s safe to assign it that type. That’s probably a result of the flow analysis they do.</p>
+
+<p>Now let’s try calling <code class="language-plaintext highlighter-rouge">id</code> several times, with different types:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* @flow */
+function id(x) { return x;}
+id(5); id('hi');
+
+</code></pre></div></div>
+
+<p>Flow suggests:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function id(x: string | number) : string | number{ return x;}
+</code></pre></div></div>
+
+<p>Uh oh - does this means the argument and result types are no longer tied to each other? If I pass in a number, will the compiler check that I use the result only as a number (and not as a string)? Let’s try using it, doing <code class="language-plaintext highlighter-rouge">var n = id(5)</code>, flow suggests:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var n: string | number = id(5);
+
+</code></pre></div></div>
+
+<p>Despite <code class="language-plaintext highlighter-rouge">n</code> only ever being assigned a number, it now has type <code class="language-plaintext highlighter-rouge">string | number</code>. So apparently, <strong>union types propagate implicitly</strong>, infecting everything on the way.</p>
+
+<h3 id="explicit-generics-1">Explicit Generics</h3>
+
+<p>Fortunately, flow too has generics, and again <a href="http://flowtype.org/docs/functions.html#_">straight out of the manual</a> we find:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* @flow */
+function foo(x: X): X { return x; }
+
+</code></pre></div></div>
+
+<p>Great! We got what we needed, but without type inference.</p>
+
+<h1 id="infernu">Infernu</h1>
+
+<p>Let’s get down to business. Infernu says:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//       id : a.(b -&gt; b)
+function id(x) { return x; }
+
+</code></pre></div></div>
+
+<p>Cool! Without any help from us, Infernu figured out the <a href="https://en.wikipedia.org/wiki/Principal_type">most generic type</a>. Take a type <code class="language-plaintext highlighter-rouge">b</code>, return the same type <code class="language-plaintext highlighter-rouge">b</code>. The magic of polymo…<strong>Wait,</strong> what’s that <code class="language-plaintext highlighter-rouge">a.</code> thing?</p>
+
+<p>Well, JavaScript has this nice keyword called <code class="language-plaintext highlighter-rouge">this</code> which is <em>dynamically scoped</em>, meaning that <code class="language-plaintext highlighter-rouge">this</code> is bound to different things <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this">depending on <strong>how your function is invoked</strong> and not on how it’s defined</a>. For example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var obj = { hat: { type: 'top' }, getHatType: function() { return this.hat.type; } };
+obj.getHatType(); // ok.
+var f = obj.getHatType;
+f(); // oops! TypeError: Cannot read property 'type' of undefined
+
+</code></pre></div></div>
+
+<p>Nasty stuff. Every JavaScript programmer should know <code class="language-plaintext highlighter-rouge">this</code>.</p>
+
+<p>Fortunately, Infernu is here to save you. It infers not only what arguments and return types a function has, but also what <code class="language-plaintext highlighter-rouge">this</code> must be for the function call to work, and verifies that you use it correctly.</p>
+
+<p>Infernu type signatures for functions have the following format (subject to change without notice, bla bla bla):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>this.(arguments -&gt; result)
+</code></pre></div></div>
+
+<p>So for our <code class="language-plaintext highlighter-rouge">var f = obj.getHatType</code> example, Infernu says:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//  f : {hat: {type: d, ..f}, ..e}.(() -&gt; d)
+var f = obj.getHatType;
+
+</code></pre></div></div>
+
+<p>Decomposing that type signature, we read that <code class="language-plaintext highlighter-rouge">this</code> is expected to be an object containing <em>at least</em> a property called ‘hat’ which is an object with <em>at least</em> a property called ‘type’ of some type <code class="language-plaintext highlighter-rouge">d</code>. The function takes no arguments (hence the empty <code class="language-plaintext highlighter-rouge">()</code>) and returns the same type <code class="language-plaintext highlighter-rouge">d</code> that was taken from the hat.type property of <code class="language-plaintext highlighter-rouge">this</code>. (The ellipsis stuff <code class="language-plaintext highlighter-rouge">..f</code> and <code class="language-plaintext highlighter-rouge">..e</code> is due to row-type polymorphism, which will be elaborated upon in a future blog post.)</p>
+
+<p>Back to our identity function, we examine the signature again: <code class="language-plaintext highlighter-rouge">a.(b -&gt; b)</code> - the type of <code class="language-plaintext highlighter-rouge">this</code> is given an unconstrained type parameter <code class="language-plaintext highlighter-rouge">a</code> - so Infernu is telling us explicitly that <strong><code class="language-plaintext highlighter-rouge">this</code> is allowed to be anything</strong> for our identity function. Yippy!</p>
+
+<h1 id="summary">Summary</h1>
+
+<p>We saw that both TypeScript and Flow (and Google Closure too, which I haven’t shown) support generics that can express the identity function properly. They also offer weak forms of type inference that sometimes yields weakly-typed results. Infernu, on the other hand, will infer generic types automatically, and prefers to fail over giving weak typings.</p>
+
+<p>There are many known discussions about subtyping (inheritance)-based type systems, represented here by TypeScript and Flow, vs. parametric polymorphism (being Infernu in this case). There are known pros and cons to both sides: but one important result is that type inference is <strong>just easier</strong> when there is no subtyping involved.</p>
+
+<p>Infernu is designed to take advantage of that.</p>

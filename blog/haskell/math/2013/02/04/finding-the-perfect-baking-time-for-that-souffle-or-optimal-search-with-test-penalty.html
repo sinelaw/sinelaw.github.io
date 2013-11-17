@@ -1,0 +1,157 @@
+<h2 id="tldr">TL;DR</h2>
+
+<p>How to find a value in a range of integers where every test carries a cost with pretty graphs at the end.</p>
+
+<h2 id="dont-ruin-that-soufflé">Don’t ruin that soufflé</h2>
+
+<p>You know that problem. If you take it out of the oven too soon, and you get a raw egg; leave it in for too long, and you’ll end up with a fat, flat omelet (or is it omelette?). A soufflé is like Schrödinger’s cat: if you open the oven to observe, it will collapse from the good-bad superposition into a slobbery glob of goo. So what to do?</p>
+
+<p>The real answer is to get a good cookbook or tips from someone who knows. But let’s not bother with reality here: there’s an interesting problem hiding here that’s worth exploring. Let’s assume you can only make one soufflé at a time, and that if you open the oven to check, you can’t put it back in. It will either be underdone, exactly ready, or overdone. Also let’s assume that the ideal time to bake a soufflé is a constant, integer number of minutes. You need to find out quickly what’s the best baking time because you are hosting a party in a few hours and want to be prepared. Finally, let’s assume that we tried to make one and after baking it for 30 minutes found that it was overdone.</p>
+
+<p>So what’s the <em>fastest</em> way to find out the perfect baking time for a soufflé?</p>
+
+<h2 id="so-heres-the-actual-question">So here’s the actual question</h2>
+
+<p>To state the problem more generally: we have a test, a boolean function of integers <em><strong>f(t)</strong></em>, that tells us whether a desired value <em><strong>s</strong></em> is less than the tested value <em><strong>t</strong></em>. Or, in Haskell:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>f :: Integer -&gt; Bool
+f t = t &gt;= s
+</code></pre></div></div>
+
+<p>Every time we do the test (evaluate <em><strong>f(t)</strong></em>) we pay a penalty - in the case of a soufflé, we waste time: we have to restart the process and start baking a new one. Let’s call this penalty the <em>cost function</em>, and let it depend on the value we are testing. For our simple purposes, let the function be from integers to integers.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cost :: Integer -&gt; Integer
+</code></pre></div></div>
+
+<p>Finally, we point out that <em><strong>s</strong></em>, that value we’re trying to find, is a random variable with probability function <em><strong>pf</strong></em> for finding <em><strong>s</strong></em> in a range <em><strong>[x,y]</strong></em>. This function satisfies:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pf :: Integer -&gt; Integer -&gt; Integer -&gt; Double
+-- the rule is:
+pf x y z = sum . map pmf $ [x..y]
+</code></pre></div></div>
+
+<p>Where <em><strong>pmf</strong></em> (probability mass function) is a distribution on the total range <em><strong>[a,b]</strong></em> where <em><strong>s</strong></em> is known to reside.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pmf :: Integer -&gt; Double
+</code></pre></div></div>
+
+<p>Being a probability mass function, the rule that <em><strong>pmf</strong></em> must hold is:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sum . map pmf $ [a..b] = 1
+-- or
+pf a b = 1
+</code></pre></div></div>
+
+<p>The problem is then, to find an algorithm that <strong>finds <em>s</em> with minimal expected cost</strong>. The average total cost of checking a range <em><strong>[x..y]</strong></em> when testing a value <em><strong>t</strong></em> in the range, can be calculated recursively. Let’s say our algorithm decides which value to test next using a function <em><strong>guessVal(x,y)</strong></em>. First we need to define the conditional probability <em><strong>cpf</strong></em> of finding <em><strong>s</strong></em> in a range <em><strong>[x’,y’]</strong></em> given the fact that it is know to lie in an extended range <em><strong>[x,y]</strong></em>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cpf :: Integer -&gt; Integer -&gt; Integer -&gt; Integer -&gt; Double
+cpf x y x' y' = ... -- related to pf and depends on the distribution
+</code></pre></div></div>
+
+<p>Then we can write:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>avgCost :: Integer -&gt; Integer -&gt; Double
+avgCost x y = 
+    if (x == y) 
+    then 0 
+    else cost t + (cpf' x t) * (avgCost x t) 
+                + (cpf' (t+1) y) * (avgCost (t+1) y)
+    where t    = guessVal x y
+          cpf' = cpf x y
+</code></pre></div></div>
+
+<p>This assumes that <em><strong>t</strong></em> is actually in the range <em><strong>[x,y]</strong></em> and that <em><strong>s</strong></em> is known to be in that range. If the range is a single integer, there is nothing to check and thus zero cost. Otherwise, the cost is the probability-weighted average of the two next branches (the guessed value yielded a test result false or true). Note that for any distribution, the total of the two <em><strong>cpf</strong></em> values above will always be 1 since we are covering the entire range on which the condition is applied. We need to minimize the expected cost, so the general problem is:</p>
+
+<blockquote>
+  <p>Choose <em><strong>guessVal</strong></em> that minimizes <em><strong>avgCost</strong></em> for a given range <em><strong>[a,b].</strong></em></p>
+</blockquote>
+
+<p>A minor subtlety to note is that we never need to test the highest value of a range because it will always test positive. This can be expressed as the rule:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>x &lt;= (guessVal x y) &lt; y
+</code></pre></div></div>
+
+<h3 id="simplifying-assumption">Simplifying assumption</h3>
+
+<p>Let’s assume that our probability distribution is uniform. In that case the probability function depends only on the size of the range being tested and a constant that depends on the complete range size:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pf x y = (y - x + 1) / (b - a + 1)
+-- and conditional probability:
+cpf x y x' y' = (y' - x' + 1) / (y - x + 1)
+</code></pre></div></div>
+
+<p>Under these conditions the avgCost function may be rewritten as:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>avgCost x y = 
+    if (x == y) 
+    then 0 
+    else cost t + c * ((t - x + 1) * (avgCost x t) 
+                         + (y - t) * (avgCost (t+1) y))
+    where t = guessVal x y
+          c = 1.0 / (y - x + 1)
+</code></pre></div></div>
+
+<p>In many cases uniform distribution is not a good pick - for example, when we have a pretty good guess about where <em><strong>s</strong></em> lies in the range a normal distribution would be more appropriate.</p>
+
+<h2 id="cost-functions">Cost functions</h2>
+
+<h4 id="constant-cost">Constant cost</h4>
+
+<p>In the trivial case, the cost function is just a constant - most trivially, it is always 1. In that case our problem boils down to minimizing the <strong>number of tests</strong> and is the same as finding a value in an array. The well-known solution to that is <strong>binary search</strong>. Our average cost is then:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>avgCost x y = 
+    if (x == y) 
+    then 0 
+    else 1 + 2 * 1/2 * (avgCost x t)
+    where t    = x + (y - x) / 2
+</code></pre></div></div>
+
+<p>This reduces to the expected value of <em><strong>log(n)</strong></em> (rounded up) where <em><strong>n</strong></em> is the size of the complete range.</p>
+
+<h4 id="linear-cost">Linear cost</h4>
+
+<p>Unfortunately, when baking a soufflé every attempt has more than a constant cost - you have to wait a certain amount of time to find out if a given duration for baking is too short or too long. If time is of the essence, an appropriate cost function would be <strong>linear and increasing</strong>, such as <em><strong>cost(t) = t</strong></em>. In that case the equation becomes:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>avgCost x y =
+    if (x == y)
+    then 0
+    else t + c * ((t - x + 1) * (avgCost x t) + (y - t) * (avgCost (t+1) y))
+    where t = guessVal x y
+    c = 1.0 / (y - x + 1)
+</code></pre></div></div>
+
+<p>Just a reminder: the problem is to minimize the average cost by picking the right <strong>guessVal</strong> function - picking the right t every time. If anyone solves this, let me know.</p>
+
+<h2 id="visualization">Visualization</h2>
+
+<p>As suggested by <a href="http://cstheory.stackexchange.com/a/16223/13449">this answer</a>1, any sensible algorithm is equivalent to a binary decision tree (given a range <em><strong>[a,b]</strong></em>). At each node, the algorithm tests a value <em><strong>x</strong></em>, spending <em><strong>cost(x)</strong></em>, to determine which of the branches to take. If we assign a cost value to each node in the tree, minimal expected cost is the weighted average root-to-leaf total cost (where the weights depend on the distribution <em><strong>pmf</strong></em>; for uniform distribution the weights are identical and can be ignored.) The leaves themselves have zero cost because they signify that the result is known.</p>
+
+<p>I wrote <a href="https://gist.github.com/4704827">a small program</a> that finds the best algorithm (decision tree) for a given range and cost function, and prints out the results in graphviz-compatible .dot format. Here they are for constant cost (= binary search), linear and quadratic costs for the range [0,14]. Since I don’t (yet) have a solution for the linear cost case, I was surprised to find that the best algorithm for <strong>linear cost is still binary search</strong> (<strong>update:</strong> <strong>that’s not true, this was a side effect of testing only small trees - I’ll write a new post about the updated analysis</strong>) despite having what is intuitively a considerable bias toward the beginning of the range. For quadratic cost (<em><strong>cost(t) ~= t^2</strong></em>), the best algorithm is quite lopsided as you can see below. It’s possible that there’s a slight bias effect also for linear cost that is only prevalent for larger intervals.</p>
+
+<p>[caption id=”attachment_274” align=”aligncenter” width=”630”]<a href="images/constant-14.png"><img src="images/constant-14.png?w=630" alt="Linear cost yields the same graph as constant cost" /></a> Linear cost yields the same graph as constant cost for the range [0,14][/caption]</p>
+
+<p>[caption id=”attachment_275” align=”aligncenter” width=”630”]<a href="images/quadratic-14.png"><img src="images/quadratic-14.png?w=630" alt="Quadratic cost yields a lopsided graph" /></a> Quadratic cost yields a lopsided graph[/caption]</p>
+
+<h2 id="the-dreaded-space-leak">The dreaded Space Leak</h2>
+
+<p>The range is that small because the number of trees to test <a href="http://oeis.org/A000108">increases very fast</a> - I could only get up to 14 before running out of memory, which is another story. The implementation is naive: the program builds all the trees before calculating the average cost of each - the right way would be to calculate the cost of each tree and discard it so that the GC could get rid of it when memory gets tight.</p>
+
+<h2 id="so-what-about-that-soufflé">So what about that soufflé?</h2>
+
+<p>As the visualized in the graph for linear cost above, when time is the issue <strong>you should</strong> <strong>still use binary section search. (update: next post will explain why this is wrong).</strong> If the cost is quadratic, give higher priority to lower values.</p>
+
+<h2 id="open-questions">Open questions</h2>
+
+<ol>
+  <li>Solve the minimization problem for the recursive equation for <em><strong>avgCost</strong></em> when the cost function is linear: <em><strong>cost(t) = t</strong></em>.</li>
+  <li>Take into consideration other probability distributions. For example, solve for linearly increasing distribution (where larger values are more likely to equal <em><strong>s</strong></em>) and normal distribution around the middle of the range.</li>
+  <li>How do I improve the implementation of the brute force algorithm to not explode in RAM?</li>
+</ol>
+
+<p>Let me know when you’re done :)</p>
+
+<p>If you have any comments or insights, I’d be glad to hear them! My family can take a few more soufflé attempts…</p>
+
+<hr />
+
+<p>1. Since I couldn’t find any information about this problem I <a href="http://cstheory.stackexchange.com/questions/16216/searching-for-the-first-item-satisfying-property-with-penalty-for-every-test">asked this question</a> on <a href="http://cstheory.stackexchange.com">cstheory.stackexchange.com</a>. I got some backlash from one person about this not being a “research-level question” as dictated by the site’s FAQ… You can check out the other questions on the site to decide for yourself if this question exceeds the maximum dumbness level.</p>
