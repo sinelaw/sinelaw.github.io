@@ -1,34 +1,105 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
     <title>Noam Lewis</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <script type="text/javascript">
-      WebFontConfig = {
-      google: { families: [ 'Junge::latin', 'Source+Code+Pro:400,700:latin' ] }
-      };
-      (function() {
-      var wf = document.createElement('script');
-      wf.src = ('https:' == document.location.protocol ? 'https' : 'http') +
-      '://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js';
-      wf.type = 'text/javascript';
-      wf.async = 'true';
-      var s = document.getElementsByTagName('script')[0];
-      s.parentNode.insertBefore(wf, s);
-      })(); </script>
-
     <link rel="stylesheet" href="styles/main.less.css"/>
 
   </head>
   <body>
 
     <div class="container">
-      <h1>Noam Lewis</h1>
-<strong>This is my website.</strong>
+      <div class="row">
+        <h1>Noam Lewis
+<small> made me. There is also his slowly updating <a href="http://noamlewis.wordpress.com/">Blog.</a></small>
+</h1>
+        
+      </div>
+      <div class="row">
+        <h2>Some of my projects, in no particular order:</h2>
+      </div>
+      <div class="row">
+
+        <div class="col-sm-6">
+
+          <div class="media">
+            <a class="media-left" href="https://sinelaw.github.io/jammed/src/">
+              <img class="img-circle img-responsive" src="images/jammed.png" />
+            </a>
+            <div class="media-body">
+              <a href="https://sinelaw.github.io/jammed/src/">
+                <h4 class="media-heading">Jammed</h4>
+              </a>
+              <p>A toy traffic simulator, in <code>Javascript</code>.</p>
+              <p>Each car is individually simulated, with driver "personalities".</p>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="col-sm-6">
+
+          <div class="media">
+            <a class="media-left" href="https://sinelaw.github.io/jammed/src/">
+              <img class="img-rounded img-responsive" src="images/xmljson.png"/>
+            </a>
+            <div class="media-body">
+              <a href="https://github.com/sinelaw/xml-to-json-fast">
+                <h4 class="media-heading">xml-to-json-<strong>fast</strong></h4>
+              </a>
+              <p>Convert yer big ol' XML files to newfangled JSON. Main feature: low memory usage. <code>Haskell</code></p>
+              <p>Want fancy features? Try <a href="https://github.com/sinelaw/xml-to-json">xml-to-json</a> instead (good for small files).</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+      <div class="row">
+        <div class="col-sm-6">
+          <div class="media">
+            <a class="media-left" href="https://www.youtube.com/watch?v=2ZblWWxeLsY">
+              <img class="img-circle img-responsive" src="images/robot.png" />
+              
+            </a>
+            <div class="media-body">
+              <h4 class="media-heading">Haskell-controlled robot</h4>
+              <p>The robot that chases people to teach them <code>Haskell</code>.</p>
+              <p>I gave <a href="http://vimeo.com/99194579">a talk about cv-combinators</a> at the NYC-Haskell meetup group.</p>
+              <p>I wrote a number of Haskell libraries to get it to work:</p>
+              <ul>
+                <li><a href="https://github.com/sinelaw/HOpenCV">HOpenCV</a>: Haskell bindings for the <a href="http://opencv.org/">OpenCV</a> computer vision library. There is also <a href="https://github.com/acowley/HOpenCV">this major fork</a> (I have nothing to do with it).</li>
+                <li><a href="https://github.com/sinelaw/cv-combinators">cv-combinators</a>: Functional combinators for computer vision, using OpenCV as a backend</li>
+                <li><a href="https://github.com/sinelaw/RMP">RMP</a>: Haskell bindings to code that controls a Segway RMP</li>
+                <li><a href="http://hackage.haskell.org/package/allocated-processor-0.0.2/docs/Control-Processor.html">allocated-processor</a>: For wrapping resources in a pure API. Because once, there was no <a href="http://www.stackage.org/package/resourcet">ResourceT</a> (or similar packages).</li>
+              </ul>
+              <p>There is <a href="https://noamlewis.files.wordpress.com/2011/06/poster-2-small-final1.jpg">this beautiful poster</a> too.</p>
+            </div>
+          </div>
+          
+        </div>
+
+
+        <div class="col-sm-6">
+          <div class="media">
+            <a class="media-left" href="https://www.youtube.com/watch?v=RT87JfTYIvo">
+              <img class="img-rounded img-responsive" src="images/graphui.png" />
+              
+            </a>
+            <div class="media-body">
+              <h4 class="media-heading">Graphui</h4>
+              <p>A semantic graph editor. <a href="https://github.com/sinelaw/graphui"><code>Haskell</code> source</a>.</p>
+              <p>It has a precise <a href="http://www.ee.bgu.ac.il/~noamle/graphui/design.html">denotational design</a>,
+              and an old <a href="http://code.google.com/p/enough/wiki/Graphui">project page</a>.</p>
+            </div>
+          </div>
+          
+        </div>
+
+      </div>
 
     </div>
-
   </body>
 </html>
