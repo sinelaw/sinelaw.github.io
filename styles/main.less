@@ -57,6 +57,15 @@ h2 {
 
 }
 
+.animation(@animation) {
+    -webkit-animation: @animation;
+    -moz-animation: @animation;
+    -ms-animation: @animation; /* note that you have @trasnform here */
+    -o-animation: @animation;
+    animation: @animation; 
+
+}
+
 
 .deco-header {
     position: relative;
@@ -81,7 +90,7 @@ h2 {
             border-style: solid;
             border-color:white;
             box-shadow: 0 0 5px 0px #aaa;
-            animation: time 12s infinite ease;
+            .animation(time 12s infinite ease);
             left: 10px;
             top: 10px;
         }
@@ -108,6 +117,12 @@ h2 {
 
 
 @keyframes time {
+    to {
+        .transform(rotate(360deg));
+    }
+}
+
+@-webkit-keyframes time {
     to {
         .transform(rotate(360deg));
     }

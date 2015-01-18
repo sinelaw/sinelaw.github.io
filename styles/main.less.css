@@ -4785,6 +4785,9 @@ a.thumbnail.active {
 .progress.active .progress-bar,
 .progress-bar.active {
   -webkit-animation: progress-bar-stripes 2s linear infinite;
+  -moz-animation: progress-bar-stripes 2s linear infinite;
+  -ms-animation: progress-bar-stripes 2s linear infinite;
+  /* note that you have @trasnform here */
   -o-animation: progress-bar-stripes 2s linear infinite;
   animation: progress-bar-stripes 2s linear infinite;
 }
@@ -6330,6 +6333,11 @@ h2 {
   border-style: solid;
   border-color: white;
   box-shadow: 0 0 5px 0px #aaa;
+  -webkit-animation: time 12s infinite ease;
+  -moz-animation: time 12s infinite ease;
+  -ms-animation: time 12s infinite ease;
+  /* note that you have @trasnform here */
+  -o-animation: time 12s infinite ease;
   animation: time 12s infinite ease;
   left: 10px;
   top: 10px;
@@ -6371,6 +6379,16 @@ h2 {
   background-color: red;
 }
 @keyframes time {
+  to {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    /* note that you have @trasnform here */
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@-webkit-keyframes time {
   to {
     -webkit-transform: rotate(360deg);
     -moz-transform: rotate(360deg);
