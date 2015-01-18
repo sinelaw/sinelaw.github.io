@@ -13,8 +13,8 @@
     <div class="container">
       <div class="row">
         <h1>Noam Lewis
-<small> made me. There is also his slowly updating <a href="http://noamlewis.wordpress.com/">Blog.</a></small>
-</h1>
+          <small> made me. There is also his slowly updating <a href="http://noamlewis.wordpress.com/">Blog.</a></small>
+        </h1>
         
       </div>
       <div class="row">
@@ -56,6 +56,11 @@
 
         </div>
 
+
+      </div>
+
+      <div class="row">
+        <h2>Older stuff.</h2>
       </div>
       <div class="row">
         <div class="col-sm-6">
@@ -67,7 +72,7 @@
             <div class="media-body">
               <h4 class="media-heading">Haskell-controlled robot</h4>
               <p>The robot that chases people to teach them <code>Haskell</code>.</p>
-              <p>I gave <a href="http://vimeo.com/99194579">a talk about cv-combinators</a> at the NYC-Haskell meetup group.</p>
+              <p>I gave <a href="http://vimeo.com/99194579"><strong>a talk</strong> about cv-combinators</a> at the NYC-Haskell meetup group.</p>
               <p>I wrote a number of Haskell libraries to get it to work:</p>
               <ul>
                 <li><a href="https://github.com/sinelaw/HOpenCV">HOpenCV</a>: Haskell bindings for the <a href="http://opencv.org/">OpenCV</a> computer vision library. There is also <a href="https://github.com/acowley/HOpenCV">this major fork</a> (I have nothing to do with it).</li>
@@ -89,13 +94,43 @@
               
             </a>
             <div class="media-body">
-              <h4 class="media-heading">Graphui</h4>
-              <p>A semantic graph editor. <a href="https://github.com/sinelaw/graphui"><code>Haskell</code> source</a>.</p>
+              <h4 class="media-heading"><a href="https://www.youtube.com/watch?v=RT87JfTYIvo">Graphui</a></h4>
+              <p>A semantic graph editor. </p>
               <p>It has a precise <a href="http://www.ee.bgu.ac.il/~noamle/graphui/design.html">denotational design</a>,
-              and an old <a href="http://code.google.com/p/enough/wiki/Graphui">project page</a>.</p>
+                and an old <a href="http://code.google.com/p/enough/wiki/Graphui">project page</a>.</p>
+              <p>
+                <ul>
+                  <li><a href="https://github.com/sinelaw/enough/tree/stable">Original funky <code>python</code> version.</a> Check the graphui directory in the "stable" branch. From way back in 2007.</li>
+                  <li>Later (2010) implementation in <a href="https://github.com/sinelaw/graphui"><code>Haskell</code>, incomplete but more principled</a>, (using Yampa for FRP).</li>
+                  <li>Both versions feature automatic layout using GraphViz (aka "dot")</li>
+                </ul>
+              </p>
             </div>
           </div>
-          
+
+        </div>
+
+
+        <div class="col-sm-6">
+          <div class="media">
+            <a class="media-left" href="http://www.youtube.com/watch?v=zUBwj82VB9I">
+              <img class="img-rounded img-responsive" src="images/livec.png" />
+              
+            </a>
+            <div class="media-body">
+              <h4 class="media-heading"><a href="http://www.youtube.com/watch?v=zUBwj82VB9I">LiveC (2007)</a></h4>
+              <p>With Eyal Lotem. LiveC was a "semantic code editor" (very basic prototype). It is the ancient precursor to the modern <a href="https://peaker.github.io/lamdu/">Lamdu</a>, a major ongoing project by Eyal Lotem and Yair Chuchem.
+              <p>Original funky <a href="https://github.com/sinelaw/enough/tree/stable"><code>python</code> version.</a> Check the livec directory in the "stable" branch.</p>
+              <p>Features include:</p>
+                <ul>
+                  <li>Editing affects an in-memory AST directly.</li>
+                  <li>AST-based versioning, which makes textual version control irrelevant.</li>
+                  <li>Basic refactoring tools, such as renaming. They were very easy to implement due to the AST-centric design.</li>
+                </ul>
+              </p>
+            </div>
+          </div>
+
         </div>
 
       </div>

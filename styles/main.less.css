@@ -6287,7 +6287,7 @@ button.close {
 }
 html,
 body {
-  font-family: 'Junge', serif;
+  font-family: "Junge", "Times New Roman", Times, serif;
 }
 h1 {
   border-bottom: 1px solid #333;
@@ -6296,6 +6296,8 @@ h2 {
   padding-bottom: 10px;
 }
 .media-left {
+  width: 96px;
+  min-width: 96px;
   max-width: 96px;
 }
 .media {
