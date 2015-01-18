@@ -6306,6 +6306,9 @@ h2 {
   min-width: 96px;
   max-width: 96px;
 }
+.media-left > img {
+  margin: 0 auto;
+}
 .media {
   margin: 40px 0;
 }
@@ -6333,12 +6336,12 @@ h2 {
   border-style: solid;
   border-color: white;
   box-shadow: 0 0 5px 0px #aaa;
-  -webkit-animation: time 12s infinite ease;
-  -moz-animation: time 12s infinite ease;
-  -ms-animation: time 12s infinite ease;
+  -webkit-animation: time 120s infinite ease;
+  -moz-animation: time 120s infinite ease;
+  -ms-animation: time 120s infinite ease;
   /* note that you have @trasnform here */
-  -o-animation: time 12s infinite ease;
-  animation: time 12s infinite ease;
+  -o-animation: time 120s infinite ease;
+  animation: time 120s infinite ease;
   left: 10px;
   top: 10px;
 }
