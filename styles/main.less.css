@@ -6352,7 +6352,7 @@ h2 {
   /* note that you have @trasnform here */
   -o-transform-origin: -10px -10px;
   transform-origin: -10px -10px;
-  background-color: black;
+  background-color: red;
 }
 .deco-2 {
   -webkit-transform-origin: -10px 10px;
@@ -6379,7 +6379,7 @@ h2 {
   /* note that you have @trasnform here */
   -o-transform-origin: 10px 10px;
   transform-origin: 10px 10px;
-  background-color: red;
+  background-color: black;
 }
 @keyframes time {
   to {
