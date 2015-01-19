@@ -6308,54 +6308,30 @@ button.close {
   border-radius: 100px;
   width: 20px;
   height: 20px;
-  border-width: 2px;
-  border-style: solid;
-  border-color: white;
-  box-shadow: 0 0 5px 0px #aaa;
-  -webkit-animation: time 120s infinite ease;
-  -moz-animation: time 120s infinite ease;
-  -ms-animation: time 120s infinite ease;
+  box-shadow: 2px 2px 10px 0px #aaa;
+  -webkit-animation: time 15s infinite linear;
+  -moz-animation: time 15s infinite linear;
+  -ms-animation: time 15s infinite linear;
   /* note that you have @trasnform here */
-  -o-animation: time 120s infinite ease;
-  animation: time 120s infinite ease;
-  left: 10px;
-  top: 10px;
+  -o-animation: time 15s infinite linear;
+  animation: time 15s infinite linear;
+  background-color: transparent;
 }
-.deco-1 {
-  -webkit-transform-origin: -10px -10px;
-  -moz-transform-origin: -10px -10px;
-  -ms-transform-origin: -10px -10px;
-  /* note that you have @trasnform here */
-  -o-transform-origin: -10px -10px;
-  transform-origin: -10px -10px;
-  background-color: red;
+.deco-base > .deco-rel .deco-1 {
+  left: -3px;
+  top: 3px;
 }
-.deco-2 {
-  -webkit-transform-origin: -10px 10px;
-  -moz-transform-origin: -10px 10px;
-  -ms-transform-origin: -10px 10px;
-  /* note that you have @trasnform here */
-  -o-transform-origin: -10px 10px;
-  transform-origin: -10px 10px;
-  background-color: purple;
+.deco-base > .deco-rel .deco-2 {
+  left: 3px;
+  top: -3px;
 }
-.deco-3 {
-  -webkit-transform-origin: 10px -10px;
-  -moz-transform-origin: 10px -10px;
-  -ms-transform-origin: 10px -10px;
-  /* note that you have @trasnform here */
-  -o-transform-origin: 10px -10px;
-  transform-origin: 10px -10px;
-  background-color: pink;
+.deco-base > .deco-rel .deco-3 {
+  left: 3px;
+  top: 3px;
 }
-.deco-4 {
-  -webkit-transform-origin: 10px 10px;
-  -moz-transform-origin: 10px 10px;
-  -ms-transform-origin: 10px 10px;
-  /* note that you have @trasnform here */
-  -o-transform-origin: 10px 10px;
-  transform-origin: 10px 10px;
-  background-color: black;
+.deco-base > .deco-rel .deco-4 {
+  left: -3px;
+  top: -3px;
 }
 @keyframes time {
   to {
