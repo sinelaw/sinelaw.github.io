@@ -33,10 +33,39 @@
 
 
       <div class="row">
-        <h2>Some of my projects, in no particular order:</h2>
+        <h2>Some of my projects:</h2>
       </div>
       <div class="row">
 
+        <div class="col-md-12 col-sm-12">
+
+          <div class="media">
+            <a class="media-left" href="//github.com/sinelaw/sjs">
+              <img class="img-rounded img-responsive" src="images/js.png"/>
+            </a>
+            <div class="media-body">
+              <a href="//github.com/sinelaw/sjs">
+		<h4 class="media-heading">Safe JavaScript (for lack of a better name) <small>Ongoing project.</small></h4>
+	      </a>
+	      <p>A type inference and checker for JavaScript.</p>
+	      <p><strong>Features:</strong>
+		<ul>
+		  <li>Full type inference: no type annotations neccessary.</li>
+		  <li>Parametric polymorphism (aka "generics"), based on Hindley-Milner type inference.</li>
+		  <li>Row-type polymorphism, otherwise known as "static duck typing".</li>
+		  <li>Recursive types for true representation of object-oriented methods.</li>
+		  <li>Correct handling of JS's <code>this</code> dynamic scoping rules.</li>
+	      </ul></p>
+<p>Support for type annotations for specifically constraining or for documentation is planned. 
+Polymorphism is value restricted, ML-style.
+Equi-recursive types are constrained to at least include a row type in the recursion to prevent inference of evil recursive types.
+</p>
+	    </div>
+	  </div>
+	</div>
+
+      </div>
+      <div class="row">
 
         <div class="col-md-6 col-sm-12">
 
