@@ -2,6 +2,9 @@
 @import "decor.less";
 //@import "pattern.less";
 
+@font-size-base: 17px;
+
+
 html, body {
     font-family: "Junge", "Times New Roman", Times, serif;
     // font-family: 'Source Code Pro', ;
@@ -20,14 +23,22 @@ h2 {
     padding-bottom: 10px;
 }
 
+h4 { 
+font-weight: bold;
+}
+
 .media-left {
     width: 96px;
     min-width: 96px;
     max-width: 96px;
-    @media (max-width: @screen-sm-min) {
+    @media (max-width: @screen-md-min) {
         width: 64px;
         min-width: 64px;
         max-width: 64px;
+    }
+    @media (max-width: @screen-sm-min) {
+        display: block;
+        margin-bottom: 10px;
     }
     & > img {
         margin: 0 auto;
