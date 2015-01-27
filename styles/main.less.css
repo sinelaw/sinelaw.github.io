@@ -6308,13 +6308,13 @@ button.close {
   border-radius: 100px;
   width: 20px;
   height: 20px;
-  box-shadow: 3px 3px 10px 0px #aaa;
-  -webkit-animation: time 15s infinite linear;
-  -moz-animation: time 15s infinite linear;
-  -ms-animation: time 15s infinite linear;
+  box-shadow: 4px 4px 10px 0px #aaa;
+  -webkit-animation: time 10s infinite linear;
+  -moz-animation: time 10s infinite linear;
+  -ms-animation: time 10s infinite linear;
   /* note that you have @trasnform here */
-  -o-animation: time 15s infinite linear;
-  animation: time 15s infinite linear;
+  -o-animation: time 10s infinite linear;
+  animation: time 10s infinite linear;
   background-color: transparent;
 }
 .deco-base > .deco-rel .deco-1 {
