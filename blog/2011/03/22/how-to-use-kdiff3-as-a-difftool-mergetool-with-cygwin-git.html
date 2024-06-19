@@ -1,0 +1,11 @@
+<p>First, install kdiff3 for windows.</p>
+
+<p>Second, create the following script somewhere (such as ~/kdiff3.sh, and change the location of your kdiff3.exe to an appropriate cygwin-style path to where you executable really is). The script is based on <a href="http://goodliffe.blogspot.com/2009/04/subversion-kdiff3-and-cygwin.html?showComment=1300806241031">Pete Goodliffe’s one he used for svn</a>. I’ve expanded on the idea to make it more flexible. <strong>See my <a href="http://noamlewis.wordpress.com/2011/03/22/how-to-run-any-windows-program-from-cygwin-still-using-cygwin-style-path/">next post</a> for a more general version that can be used for any windows program</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">#!/bin/sh RESULT="" for arg do if [[ "" != "$arg" ]] &amp;&amp; [[ -e $arg ]]; then OUT=`cygpath -wa $arg` else OUT=$arg if [[ $arg == -* ]]; then OUT=$arg else OUT="'$arg'" fi fi RESULT=$RESULT" "$OUT done /cygdrive/d/Program\ Files\ \(x86\)/KDiff3/kdiff3.exe $RESULT</code></p>
+
+<p>Finally, configure your ~/.gitconfig to: <code class="language-plaintext highlighter-rouge">[diff] tool = kdiff3 [merge] tool = kdiff3 [mergetool "kdiff3"] path = ~/kdiff3.sh keepBackup = false trustExitCode = false</code></p>
+
+<p>No thanks to wordpress for ruining the whitespace formatting… :(</p>
+
+<p>Try running <strong>git difftool</strong> (make sure you have some modified files) to make sure it works.</p>

@@ -1,0 +1,13 @@
+<p>In my previous post I posted a script useful for running kdiff3 for windows correctly from within cygwin. Here’s a more general version that can be used for any windows program. Save the following as <strong>~/cygwinify.sh</strong> (or whatever you like):</p>
+
+<p><code class="language-plaintext highlighter-rouge">#!/usr/bin/bash RESULT="" for arg do if [[ "" != "$arg" ]] &amp;&amp; [[ -e $arg ]]; then OUT=`cygpath -wa $arg` else if [[ $arg == -* ]]; then OUT=$arg else OUT="'$arg'" fi fi RESULT=$RESULT$OUT" " done echo "$RESULT"</code></p>
+
+<p>The script tries to find any file or directory names in your command line arguments, and converts them to absolute, windows-style path names using <strong>cygpath -wa</strong>. You can then run something like:</p>
+
+<p><code class="language-plaintext highlighter-rouge">explorer `~/cygwinify.sh /tmp`</code></p>
+
+<p>And it will open Windows Explorer in the correct folder.</p>
+
+<p>Also, the script to run kdiff3 becomes (just replace the path to the executable with your own):</p>
+
+<p><code class="language-plaintext highlighter-rouge">#!/usr/bin/bash "/cygdrive/d/Program Files (x86)/KDiff3/kdiff3.exe" `~/cygwinify.sh "$@"`</code></p>

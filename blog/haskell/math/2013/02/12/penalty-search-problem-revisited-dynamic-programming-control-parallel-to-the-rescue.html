@@ -1,0 +1,39 @@
+<p>My <a href="http://noamlewis.wordpress.com/2013/02/04/finding-the-perfect-baking-time-for-that-souffle-or-optimal-search-with-test-penalty/">last post</a> was about searching with a test penalty. The problem boils down to minimizing a recursive difference equation. Since I didn’t (and still don’t) have a closed-form solution, I had to base any conclusions on brute-force tests that find the best tree. The run time was dreadfully slow so I could calculate the solution for no more than a 15-cell array. For small arrays and a small cost constant, the solution for linear cost is just a <a href="http://en.wikipedia.org/wiki/Binary_search">half-interval search tree</a>.</p>
+
+<p>After writing that post I realized several things and here are the new results.</p>
+
+<p>As suggested by several people, the solution can be found more efficiently using dynamic programming. I’ve implemented a <a href="https://github.com/sinelaw/penalty-search/blob/47728551b9231fdc075c9f0f83c218922f2f8292/test_search.hs">revised version</a> of the code that finds the solution by recursively finding it for subtrees. It runs much faster after this change. The DP approach also eliminates the space leak - the program uses very little memory. Also, I’ve added parallelization with a tiny bit of code <a href="http://hackage.haskell.org/packages/archive/parallel/latest/doc/html/Control-Parallel-Strategies.html#v:parMap">using parMap</a> to cut the execution time by a factor of 4 (on my core i5). It’s pretty cool how easy it is to parallelize purely functional code! After these changes, calculating an array one cell larger takes almost exactly three times longer.</p>
+
+<p>Here’s my theory for why three times longer. Since we split the array at the test index and have two branches for each possible root node, an array of size <strong>n</strong> requires solving the subtrees for arrays of sizes <strong>1</strong> through <strong>n-1</strong>, twice [see note 1]. So, relative to the <strong>n-1</strong> case we have at least twice as much work (for the two extremities that have <strong>n-1</strong> sized sub-arrays). Additionally we have the twice the sum from <strong>2</strong> to <strong>n-1</strong> of <strong>2^-x</strong> amount of work to do (relative to the <strong>n-1</strong> case) for the smaller sub-arrays, which converges very quickly to <strong>1</strong>. In total, we need to do 3 times as much work when using the DP approach.</p>
+
+<p>With the improved code I’ve calculated the solutions for slightly larger arrays. Here are the results for the range [0,17] (an array of size 18):</p>
+
+<p>[caption id=”attachment_303” align=”aligncenter” width=”730”]<a href="images/noname-dot.png"><img src="images/noname-dot.png?w=730" alt="Constant cost - binary section search" /></a> Constant cost - binary section search[/caption]</p>
+
+<p>[caption id=”attachment_299” align=”aligncenter” width=”730”]<a href="images/noname-dot-2.png"><img src="images/noname-dot-2.png?w=730" alt="Slight bias towards lower indices" /></a> Linear cost - slight bias towards lower indices[/caption]</p>
+
+<p>[caption id=”attachment_300” align=”aligncenter” width=”730”]<a href="images/noname-dot-3.png"><img src="images/noname-dot-3.png?w=730" alt="Quadratic cost - strong bias towards lower indices" /></a> Quadratic cost - strong bias towards lower indices[/caption]</p>
+
+<h2 id="revised-recommendation-for-confectionery-research">Revised recommendation for confectionery research</h2>
+
+<p>Ok, I’ll skip the soufflé analogy this time. Assuming a monotonically increasing cost function, a good strategy is what you’d expect: prioritize searching in the lower-costing area, using some sort of biased interval search (rather than half interval).</p>
+
+<h2 id="open-question-still">Open question still…</h2>
+
+<p>I’m still looking for a closed-form solution to the cost equation. For those who didn’t read the <a href="http://noamlewis.wordpress.com/2013/02/04/finding-the-perfect-baking-time-for-that-souffle-or-optimal-search-with-test-penalty/">last post</a>, the problem is to find the search tree that minimizes the expected cost of a search on an array, where each test carries a cost (given by a cost function). To solve the problem, one must minimize the following value by picking the optimal test point <strong><em>t</em></strong> depending on the current range <em><strong>[x,y]</strong></em>:</p>
+
+<p><img src="http://latex.codecogs.com/gif.latex?%5Clarge%20%5Cinline%20%5Cdpi%7B120%7D%20%5Cbegin%7Balign*%7D%20E%5Bcost%28x%2Cy%29%5D%20%3D%20c%28t%29%26+P%28t%20%5Cge%20s%20%7C%20s%20%5Cin%20%5Bx%2Cy%5D%29cost%28x%2Ct%29%5C%5C%20%26+%20P%28t%3Cs%7Cs%20%5Cin%20%5Bx%2Cy%5D%29cost%28t+1%2Cy%29%20%5Cend%7Balign*%7D" alt="" /></p>
+
+<p>The simplifying assumptions were <strong>uniform distribution</strong> of the search target, and <strong>linear cost</strong>:</p>
+
+<p><img src="http://latex.codecogs.com/gif.latex?\large&space;\inline&space;\dpi{120}&space;\begin{align*}&space;E[cost(x,y)]&space;&amp;=&space;(c_0&space;t+c_1)\\&space;&amp;+\frac{(t-x+1)cost(x,t)&space;+(y-t)cost(t+1,y)}{y-x+1}&space;\end{align*}" alt="" /></p>
+
+<p>Another possible simplification: assume that the search algorithm uses a constant ratio to pick the next search target. That is, for a range <strong>[x,y]</strong> the next search target will always be <strong>c * (y - x + 1)</strong> (rounded down) where <strong>c</strong> is a constant, between 0 and 1. I’ve toyed around with this one but ended up with the same basic problem - how to solve recursive equation?</p>
+
+<p>The code is now <a href="https://github.com/sinelaw/penalty-search">up on github</a> for your doubtless enjoyment.</p>
+
+<p>Comments welcome!</p>
+
+<hr />
+
+<p>1. The algorithm is a bit smarter - there’s no need to test the last array index, so the number of tests is slightly reduced.</p>

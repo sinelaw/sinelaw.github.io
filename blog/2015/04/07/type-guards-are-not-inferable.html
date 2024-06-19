@@ -1,0 +1,22 @@
+<p>Type guards, or typecase expressions allow refining a binding’s type and are commonly used in dynamic languages such as JavaScript. Consider (adapted from <a href="http://research.microsoft.com/en-us/um/people/simonpj/papers/gadt/gadt-icfp.pdf" title="Simple Unification-based Type Inference for GADTs">Simple Unification-based Type Inference for GADTs</a>):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>f x y = typecase x of
+            Int -&gt; i + y
+            other -&gt; 0
+
+
+</code></pre></div></div>
+
+<p>The function can have either of these two types (among others):</p>
+
+<p><code class="language-plaintext highlighter-rouge">a -&gt; Int -&gt; Int</code></p>
+
+<p>And</p>
+
+<p><code class="language-plaintext highlighter-rouge">a -&gt; a -&gt; Int</code></p>
+
+<p>Neither is more general, so there is no principal type.</p>
+
+<p>Unless the user tells us something (in a type annotation) we have no way of deciding which type should be inferred.</p>
+
+<p>So for now, <a href="https://github.com/sinelaw/infernu">Infernu</a> will probably not have support for type guards like <a href="http://flowtype.org/">Flow</a> and <a href="http://www.typescriptlang.org/">TypeScript</a> do (both of which don’t have full type inference). Another possibility is to allow type guards in trivial cases only.</p>

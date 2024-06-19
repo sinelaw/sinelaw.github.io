@@ -1,0 +1,638 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="/blog/" rel="alternate" type="text/html" /><updated>2024-06-19T11:26:38+03:00</updated><id>/blog/feed.xml</id><title type="html">Noam Lewis - The Blog</title><entry><title type="html">Type-safe enums in C, using a clang plugin</title><link href="/blog/2017/10/05/type-safe-enums-in-c-using-a-clang-plugin.html" rel="alternate" type="text/html" title="Type-safe enums in C, using a clang plugin" /><published>2017-10-05T00:00:00+03:00</published><updated>2017-10-05T00:00:00+03:00</updated><id>/blog/2017/10/05/type-safe-enums-in-c-using-a-clang-plugin</id><content type="html" xml:base="/blog/2017/10/05/type-safe-enums-in-c-using-a-clang-plugin.html"><![CDATA[<p>The C programming language generally treats enums as integers (see “Appendix: For Language Lawyers” for reference).</p>
+
+<p>Wouldn’t it be nice if we could do more with enums, and do it safely?</p>
+
+<p>Some other languages have anything from integer-incompatible enums to full-blown sum types. It would be nice to have something like that in C.</p>
+
+<p>I wrote the <a href="https://github.com/sinelaw/elfs-clang-plugins">enums_conversion clang plugin</a> aiming to do just that, by treating enums as incompatible with integers (except via explicit casting).</p>
+
+<h2 id="a-motivating-example"><a href="https://github.com/sinelaw/elfs-clang-plugins/blob/docs/enums_conversion/README.md#a-motivating-example"></a>A motivating example</h2>
+
+<p>Some people are surprised at the goals of this plugin. Here is a simple example to explain the motivation.</p>
+
+<p>Consider the following (totally fabricated) API:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>enum OpGetResult {
+    OP_GET_ERROR,
+    OP_GET_OK,
+};
+
+enum OpGetResult get_items(void);
+
+/* Implementation: */
+
+enum OpGetResult get_items(void)
+{
+    /* ... do something with side effects ... */
+    return OP_GET_OK;
+}
+</code></pre></div></div>
+
+<p>So far so good. Save it as <code class="language-plaintext highlighter-rouge">test.c</code> and compile this program with gcc:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gcc -std=c11 -Wall -Wextra -Werror -c test.c
+</code></pre></div></div>
+
+<p>No errors, yay!</p>
+
+<h3 id="a-simple-bug"><a href="https://github.com/sinelaw/elfs-clang-plugins/blob/docs/enums_conversion/README.md#a-simple-bug"></a>A simple bug</h3>
+
+<p>Now, let’s introduce a bug. Someone decided the API is no good, and <code class="language-plaintext highlighter-rouge">get_items</code> should just return the number of items it “got”. So the new API is:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* This enum is in use elsewhere... */
+enum OpGetResult {
+    OP_GET_ERROR,
+    OP_GET_OK,
+};
+
+int get_items(void); /* return value changed to 'int' */
+
+/* Implementation: */
+
+int get_items(void)
+{
+    /* ... do something with side effects ... */
+    return OP_GET_OK; /* oops! forgot to change this */
+}
+</code></pre></div></div>
+
+<p>The bug is that <code class="language-plaintext highlighter-rouge">get_items</code> still returns the enum value <code class="language-plaintext highlighter-rouge">OP_GET_OK</code> instead of a number.</p>
+
+<p>Save as test2.c and compile (tested on gcc 6.3.0):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gcc -std=c11 -Wall -Wextra -Werror -c test2.c
+</code></pre></div></div>
+
+<p>Oh no! No error! Let’s try with clang 5.0 and the wonderful <code class="language-plaintext highlighter-rouge">-Weverything</code> which enables all warnings:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>clang -std=c11 -Weverything -Werror  -c test2.c
+</code></pre></div></div>
+
+<p>Nope! Still no error.</p>
+
+<p>The compilers are ok with this code <em>because it’s allowed</em>. However, it’s clearly not what we intended.</p>
+
+<h3 id="a-bunch-of-other-possible-bugs"><a href="https://github.com/sinelaw/elfs-clang-plugins/blob/docs/enums_conversion/README.md#a-bunch-of-other-possible-bugs"></a>A bunch of other possible bugs</h3>
+
+<p>Here is a snippet with different ‘bad code’ examples: (for testing it can be appended to one of the previous files)</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>int func(enum OpGetResult e, unsigned int x, unsigned int y);
+int func(enum OpGetResult e, unsigned int x, unsigned int y)
+{
+  handle_result(x); /* passing arbitrary integer where one of several enum values was expected */
+
+  enum OpGetResult e2 = x; /* assigning from arbitrary integer (which may not be a valid enum value) */
+
+  if (e2 == y) { /* comparing enum to arbitrary integer */
+  }
+
+  return e; /* returning enum where arbitrary integer is expected by caller */
+}
+</code></pre></div></div>
+
+<p>Neither gcc 6.3.0 nor clang 5.0 emit any kind of warning about the above code.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Let's try gcc with some extra warnings:
+gcc -std=c11 -Wall -Wextra -Werror -Wconversion -Wenum-compare -Wswitch-enum -Wsign-conversion  -c test2.c
+
+# clang with -Weverything:
+clang -std=c11 -Weverything -Werror  -c test2.c
+</code></pre></div></div>
+
+<h3 id="clang-plugin-to-the-rescue"><a href="https://github.com/sinelaw/elfs-clang-plugins/blob/docs/enums_conversion/README.md#clang-plugin-to-the-rescue"></a>clang plugin to the rescue</h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">enums_converesion</code> clang plugin detects and warns about all of the above.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># clang -std=c11 -Weverything  -c test2.c -Xclang -load -Xclang ./clang_plugins.so -Xclang -add-plugin -Xclang enums_conversion
+test2.c:22:23: error: enum conversion to or from enum OpGetResult
+        handle_result(x); /* passing arbitrary integer where one of several enum values was expected */
+                      ^
+test2.c:24:31: error: enum conversion to or from enum OpGetResult
+        enum OpGetResult e2 = x; /* assigning from arbitrary integer (which may not be a valid enum value) */
+                              ^
+test2.c:26:13: error: enum conversion to or from enum OpGetResult
+        if (e2 == y) { /* comparing enum to arbitrary integer */
+            ^
+test2.c:29:16: error: enum conversion to or from enum OpGetResult
+        return e; /* returning enum where arbitrary integer is expected by caller */
+               ^
+4 errors generated.
+</code></pre></div></div>
+
+<h2 id="frequently-asked-questions"><a href="https://github.com/sinelaw/elfs-clang-plugins/blob/docs/enums_conversion/README.md#frequently-asked-questions"></a>Frequently Asked Questions</h2>
+
+<ol>
+  <li>But this isn’t standard C!</li>
+</ol>
+
+<p>Correct, it is a <em>restrictive subset</em> of C. Some “valid” C programs will be flagged by this plugin. I believe writing code in the spirit of this plugin will improve your code’s readability while preventing a class of bugs from ever occurring.</p>
+
+<ol>
+  <li>How is this different from gcc’s <code class="language-plaintext highlighter-rouge">-Wenum-compare</code>?</li>
+</ol>
+
+<p>The warning flag <code class="language-plaintext highlighter-rouge">-Wenum-compare</code> find comparisons between different enums, but does not look at comparing enums to integers, implicit casting to/from integers, etc. In the following program only the second <code class="language-plaintext highlighter-rouge">if</code> is flagged by <code class="language-plaintext highlighter-rouge">-Wenum-compare</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>enum A { A_FIRST, A_SECOND };
+enum B { B_FIRST, B_SECOND };
+
+int foo(enum A a, unsigned int x);
+int foo(enum A a, unsigned int x) {
+      if (x == a) { // no warning emitted
+          return 1;
+      }
+      if (B_FIRST == a) { // will cause warning: comparison between ‘enum B’ and ‘enum A’
+          return 2;
+      }
+      return 0;
+}
+</code></pre></div></div>
+
+<ol>
+  <li>How is this different from clang’s <code class="language-plaintext highlighter-rouge">-Wenum-conversion</code>?</li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">-Wenum-conversion</code> doesn’t catch implicit casts to/from integral types (the plugin does).</p>
+
+<p><code class="language-plaintext highlighter-rouge">-Wenum-conversion</code> does catch conversion from one enum type to another, like so:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>enum EnumA { E_A };
+enum EnumB { E_B };
+enum EnumA do_something(void) {
+    return E_B;
+}
+</code></pre></div></div>
+
+<ol>
+  <li>What about enums being used as combinable bits? Won’t the plugin disallow them?</li>
+</ol>
+
+<p>A common pattern is using an enum to describe the allowed bits for an “options” value that can be ORed together. For example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>enum Flags {
+    FLAG_NONE = 0,
+    FLAG_READ = 1,
+    FLAG_WRITE = 2,
+};
+enum Flags do_something(void);
+enum Flags do_something(void) {
+    return FLAG_WRITE | FLAG_READ;
+}
+</code></pre></div></div>
+
+<p>The plugin is OK with this. clang -Weverything doesn’t like this (-Wassign-enum):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>clang -std=c11 -c /tmp/test.c -Weverything
+/tmp/test.c:8:12: warning: integer constant not in range of enumerated type 'enum Flags' [-Wassign-enum]
+    return FLAG_WRITE | FLAG_READ;
+           ^
+1 warning generated.
+</code></pre></div></div>
+
+<table>
+  <tbody>
+    <tr>
+      <td>That’s a false error (if you use</td>
+      <td>with a runtime variable, <code class="language-plaintext highlighter-rouge">-Wassign-enum</code> seems to not flag this). However, the plugin does catch errors of putting an invalid value in the OR expression:</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+return FLAG_WRITE | 5;
+</code></pre></div></div>
+
+<p>Now clang -Weverything doesn’t complain (despite the possible bug).</p>
+
+<p>Running with the plugin gives:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/tmp/test.c:10:16: error: enum conversion to or from enum Flags
+        return FLAG_WRITE | 5;
+</code></pre></div></div>
+
+<ol>
+  <li>I’m afraid to use this in production.</li>
+</ol>
+
+<p>The plugin only analyzes the AST produced by clang, and does not affect the emitted code in any way.</p>
+
+<ol>
+  <li>I don’t use clang! Can I benefit from this plugin?</li>
+</ol>
+
+<p>At <a href="http://elastifile.com/">elastifile</a>, the plugin is being used as part of the CI process. Code that is being merged into master must pass the plugin’s checks (as well as other plugins from this suite). The actual production executable is built by gcc (for various unrelated reasons).</p>
+
+<p>The plugin is available as part of the <a href="https://github.com/sinelaw/elfs-clang-plugins">elfs-clang-plugins suite github.</a></p>
+
+<h2 id="appendix-for-language-lawyers"><a href="https://github.com/sinelaw/elfs-clang-plugins/blob/docs/enums_conversion/README.md#appendix-for-language-lawyers"></a>Appendix: For Language Lawyers</h2>
+
+<p>The <a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf">C11 standard (draft)</a> says:</p>
+
+<blockquote>
+  <p>An enumeration comprises a set of named integer constant values. Each distinct enumeration constitutes a different enumerated type. The type char, the signed and unsigned integer types, and the enumerated types are collectively called integer types…</p>
+</blockquote>]]></content><author><name></name></author><summary type="html"><![CDATA[The C programming language generally treats enums as integers (see “Appendix: For Language Lawyers” for reference).]]></summary></entry><entry><title type="html">Safer C programming</title><link href="/blog/2017/08/11/safer-c-programming.html" rel="alternate" type="text/html" title="Safer C programming" /><published>2017-08-11T00:00:00+03:00</published><updated>2017-08-11T00:00:00+03:00</updated><id>/blog/2017/08/11/safer-c-programming</id><content type="html" xml:base="/blog/2017/08/11/safer-c-programming.html"><![CDATA[<p>TL;DR - check out <a href="https://github.com/sinelaw/elfs-clang-plugins">elfs-clang-plugins, cool plugins for clang</a> made at <a href="https://www.elastifile.com/">elastifile</a>.</p>
+
+<p>Have you ever made the mistake of returning a bool instead of an enum?</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>enum Result do_something(void) {
+    ...
+    return true;
+}
+</code></pre></div></div>
+
+<p>In C that’s valid (in C++ you can use ‘class enum’ to avoid it, but if you didn’t you’d have the same problem).</p>
+
+<p>No compiler that I know of warns about this C code. One of our newly-open-sourced clang plugins, flags this (and many other) enum-related mistakes:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>clang -Xclang -load -Xclang ./clang_plugins.so \
+      -Xclang -add-plugin -Xclang enums_conversion \
+      -c /tmp/test.c
+/tmp/test.c:7:12: error: enum conversion to or from enum Result
+    return true;
+           ^
+1 error generated.
+</code></pre></div></div>
+
+<p>The package includes:</p>
+
+<ul>
+  <li>enums_conversion: Finds implicit casts to/from enums and integral types</li>
+  <li>include_cleaner: Finds unused #includes</li>
+  <li>large_assignment: Finds large copies in assignments and initializations (size is configurable)</li>
+  <li>private: Prevents access to fields of structs that are defined in private.h files</li>
+</ul>
+
+<p>More information at https://github.com/sinelaw/elfs-clang-plugins</p>
+
+<p>Because C is… not so safe.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[TL;DR - check out elfs-clang-plugins, cool plugins for clang made at elastifile.]]></summary></entry><entry><title type="html">Const when you need it</title><link href="/blog/2015/10/01/const-when-you-need-it.html" rel="alternate" type="text/html" title="Const when you need it" /><published>2015-10-01T00:00:00+03:00</published><updated>2015-10-01T00:00:00+03:00</updated><id>/blog/2015/10/01/const-when-you-need-it</id><content type="html" xml:base="/blog/2015/10/01/const-when-you-need-it.html"><![CDATA[<p><em>infernu uses row-type polymorphism to propagate read/write capabilities on record fields. Using row-type polymorphism to describe more than just which fields are present bears a vague resemblance to polymorphic constraints.</em></p>
+
+<p>In C, a pointer to a field in a const struct is automatically const’ed:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct foo { int field; };
+
+void useInt(const int *);
+
+int main(void) {
+
+    const struct foo x;
+
+    useInt(&amp;x.field); // no warnings because &amp;x.field is 'const int *'
+
+    return 0;
+}
+
+</code></pre></div></div>
+
+<p>Thus, a function that extracts a pointer to a (possibly deep) field from a const struct, will also return a const pointer:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>const int *getField(const struct foo *x) {
+
+    return &amp;x-&gt;field;
+
+}
+
+</code></pre></div></div>
+
+<p>(All the code compiles with `-Wall` and `-Wextra`)</p>
+
+<p>But, what if I want to use `getField` on a non-const struct, to get an accessor to a field within it? Almost works:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct foo y;
+int *bla = getField(&amp;y);
+*bla = 2;
+
+</code></pre></div></div>
+
+<p>Uh oh. We get a warning:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>warning: initialization discards ‘const’ qualifier 
+from pointer target type [enabled by default]
+     int *bla = getField(&amp;y);
+                ^
+
+</code></pre></div></div>
+
+<p>The compiler is angry because `int *bla` should be `<strong>const</strong> int *bla`. But we don’t want that! We just want to get an accessor - a writable accessor - to a field in our not-const struct value.</p>
+
+<p>C++ (not C) does have a non-solution: <a href="http://en.cppreference.com/w/cpp/language/const_cast">const_cast</a>. That isn’t what we want: it’s unsafe. What we want is, if a <strong>function doesn’t get a const struct</strong>, the ‘non-constness’ should propagate to the field accessor being returned (and vice versa: if the given struct was const, so should the accessor).</p>
+
+<p>In fancier words, we need <strong>const polymorphism</strong>, which I imagine would be written with a ‘constness type variable’ <code class="language-plaintext highlighter-rouge">C</code> like this made-up syntax:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>const&lt;C&gt; int *getField(const&lt;C&gt; struct foo *x) {
+    return &amp;x-&gt;field;
+}
+
+</code></pre></div></div>
+
+<p>And then we would expect this to compile with no problems:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    struct foo y;
+    int *bla = getField(&amp;y);
+
+</code></pre></div></div>
+
+<p>…because, as ‘y’ is not const, ergo the pointer returned from getField is not pointing at a const.</p>
+
+<p>Unfortunately, no such thing. We could represent this in a type system in a number of ways. One simple way is to say that constness is a constraint on a type (using something like Haskell’s type classes). Another way is to have ‘write into a field’ be a kind of a capability that’s part of the type.</p>
+
+<p>The latter, write-capability approach is what I use in <a href="http://sinelaw.github.io/infernu.org/s/">Infernu</a>. Here there are no structs (it’s JavaScript) but there are polymorphic records. The type system includes two flavors for each field label: Get and Set. If a field is only being read, the record (or object or row) that contains it only needs to have the ‘Get’ accessor for that field. Here’s infernu’s output for a simple example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//  obj :  { subObj:  { val: Number } }
+var obj = { subObj: { val: 3 } };
+
+</code></pre></div></div>
+
+<p>Our object is simple. The comment is what infernu infers, a reasonably simple type.</p>
+
+<p>In the notation I (shamelessly) invented, read-only fields have a prefix ‘get’ in the type, and read/write fields don’t have any prefix. So a read-only field ‘bla’ would be: <code class="language-plaintext highlighter-rouge">{ get bla : t }</code>. If ‘bla’ is required to be writable, the type is written as <code class="language-plaintext highlighter-rouge">{ bla : t }</code>. So in the above ‘obj’ example, we see that literal objects are by default inferred to be writable (type annotations would allow you to control that).</p>
+
+<p>Next let’s make a function that only reads ‘subObj’:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//       readSubObj : ( { get subObj: h | g} -&gt; h)
+function readSubObj(x) { return x.subObj; }
+
+</code></pre></div></div>
+
+<p>The type inferred says “readSubObj is a function, that takes an object with a <strong>readable field subObj</strong>, (hence “get subObj”: it doesn’t require the ‘Set’ capability!). subObj has any type ‘h’, and the function returns that same type, ‘h’. (By the way, that ‘<code class="language-plaintext highlighter-rouge">| g</code>’ means the passed object is allowed to contain also other fields, we don’t care.)</p>
+
+<p>Example of a nested read:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//       readVal : ( { get subObj:  { get val: d | c} | b} -&gt; d)
+function readVal(x) { return x.subObj.val; }
+
+</code></pre></div></div>
+
+<p>Now we need to ‘get subObj’ but subObj itself is an object with a readable field ‘val’ of type d. The function returns a ‘d’.</p>
+
+<p>We can use readSubObj on a writable object with no problems:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//  sub :  { val: Number }
+var sub = readSubObj(obj);
+
+</code></pre></div></div>
+
+<p>When infernu supports type annotations (eventually) one could take advantage of this type-system feature by marking certain fields ‘get’.</p>
+
+<p>While this isn’t exactly the same as the problem we discussed with C const pointers, the same idea <em>could</em> be used to implement polymorphic constness.</p>
+
+<p>The main idea here is that ideas from row-type polymorphism can be used to implement a certain kind of ‘capabilities’ over types, constraints that are propagated. This may be a nicer way to implement (some kind of) <a href="http://stackoverflow.com/questions/12718268/polymorphic-constraint">polymorphic constraints</a>.</p>
+
+<p>(For example, in a language that supports row extension/reduction, a function <code class="language-plaintext highlighter-rouge">{ x : Int | r } -&gt; { | r }</code> would retain the unspecified constraints from ‘r’. I’m sure there are more interesting examples.)</p>
+
+<p>If you can refer me to something like this, please do!</p>]]></content><author><name></name></author><category term="haskell" /><category term="infernu" /><category term="javascript" /><summary type="html"><![CDATA[infernu uses row-type polymorphism to propagate read/write capabilities on record fields. Using row-type polymorphism to describe more than just which fields are present bears a vague resemblance to polymorphic constraints.]]></summary></entry><entry><title type="html">Two implementations of DHM type inference</title><link href="/blog/2015/09/24/two-implementations-of-dhm-type-inference.html" rel="alternate" type="text/html" title="Two implementations of DHM type inference" /><published>2015-09-24T00:00:00+03:00</published><updated>2015-09-24T00:00:00+03:00</updated><id>/blog/2015/09/24/two-implementations-of-dhm-type-inference</id><content type="html" xml:base="/blog/2015/09/24/two-implementations-of-dhm-type-inference.html"><![CDATA[<p>Here are two simple implementations of Damas-Hindley-Milner type inference.</p>
+
+<p>First, is <a href="https://github.com/sinelaw/fresh/blob/levels-lazy/Main.hs">my Haskell version of a region-based optimized type checker</a> as explained by Oleg Kiselyov, in his <a href="http://okmij.org/ftp/ML/generalization.html">excellent review of the optimizations to generalization used in OCaml</a>. Oleg gives <a href="http://okmij.org/ftp/ML/generalization/sound_lazy.ml">an SML implementation</a>, which I’ve Haskellized rather mechanically (using ST instead of mutable references, etc.) The result is a bit ugly, but it does include all the optimizations explained by Oleg above (both lambda-depth / region / level fast generalization and instantiation, plus path compression on linked variables, and not doing expensive occurs checks by delaying them to whenever we traverse the types anyway).</p>
+
+<p>Second, here’s my <a href="https://github.com/sinelaw/fresh/blob/unification-fd/Main.hs">much shorter and more elegant implementation</a> using the neat <a href="https://hackage.haskell.org/package/unification-fd">unification-fd package</a> by Wren Romano. It’s less optimized though - currently I’m not doing regions or other optimizations. I’m not entirely satisfied with how it looks: I’m guessing this isn’t how the author of unification-fd intended generalization to be implemented, but it works. Generalization does the expensive lookup of free metavariables in the type environment. Also the instantiate function is a bit clunky. The unification-fd package itself is doing inexpensive occurs checks as above, and path compression, but doesn’t provide an easy way to keep track of lambda-depth so I skipped that part. Perhaps the Variable class should include a parameterized payload per variable, which could be used for (among other things) keeping track of lambda-depth.</p>]]></content><author><name></name></author><category term="haskell" /><summary type="html"><![CDATA[Here are two simple implementations of Damas-Hindley-Milner type inference.]]></summary></entry><entry><title type="html">In Python, don’t initialize local variables unnecessarily</title><link href="/blog/2015/06/23/in-python-dont-initialize-local-variables-unnecessarily.html" rel="alternate" type="text/html" title="In Python, don’t initialize local variables unnecessarily" /><published>2015-06-23T00:00:00+03:00</published><updated>2015-06-23T00:00:00+03:00</updated><id>/blog/2015/06/23/in-python-dont-initialize-local-variables-unnecessarily</id><content type="html" xml:base="/blog/2015/06/23/in-python-dont-initialize-local-variables-unnecessarily.html"><![CDATA[<p>A common pattern:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>def foo():
+    x = some value # but do we need this? (short answer: no)
+    if something:
+        # ... do stuff ...
+        x = 'bla'
+    else:
+        x = 'blo'
+
+</code></pre></div></div>
+
+<p>The variable <code class="language-plaintext highlighter-rouge">x</code> is being initialized before the if/else, but the intention of the programmer is that its value will actually be determined by the if/else itself. If somebody later comes around and mistakenly removes one of the assignments (inside ‘if’ or ‘else’), no runtime error will occur and <code class="language-plaintext highlighter-rouge">x</code> will remain initialized to a probably wrong value.</p>
+
+<p><strong>Leaving out the initialization is better</strong> - in that case, forgetting to set <code class="language-plaintext highlighter-rouge">x</code> in one of the branches will cause an <code class="language-plaintext highlighter-rouge">UnboundLocalError</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; def foo():
+...     if False:
+...         x = 0
+...     return x
+... 
+&gt;&gt;&gt; foo()
+Traceback (most recent call last):
+  File "", line 1, in 
+  File "", line 4, in foo
+UnboundLocalError: local variable 'x' referenced before assignment
+
+</code></pre></div></div>
+
+<p>Errors are good! (when they flag buggy code)</p>
+
+<p>Now, what if we <strong>also</strong> have an <code class="language-plaintext highlighter-rouge">x</code> declared in the global scope? Because of <a href="http://www.python-course.eu/python3_global_vs_local_variables.php">how Python handles variable scope</a>, the error will still happen (which is good).</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; x = 1
+&gt;&gt;&gt; def foo():
+...     if False:
+...         x = 0
+...     return x
+... 
+&gt;&gt;&gt; foo()
+Traceback (most recent call last):
+..
+UnboundLocalError: local variable 'x' referenced before assignment
+
+</code></pre></div></div>
+
+<p><strong>Summary</strong>: In Python, don’t initialize variables until you know what value to assign to them.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[A common pattern:]]></summary></entry><entry><title type="html">Beware of ‘var’ in for loops, JS programmers</title><link href="/blog/javascript/2015/06/15/beware-of-var-in-for-loops-js-programmers.html" rel="alternate" type="text/html" title="Beware of ‘var’ in for loops, JS programmers" /><published>2015-06-15T00:00:00+03:00</published><updated>2015-06-15T00:00:00+03:00</updated><id>/blog/javascript/2015/06/15/beware-of-var-in-for-loops-js-programmers</id><content type="html" xml:base="/blog/javascript/2015/06/15/beware-of-var-in-for-loops-js-programmers.html"><![CDATA[<p>Time and time again, I see people using ‘var’ in the initialization part of a for loop. Example from <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for">MDN (Mozilla Developer Network)</a>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>for (var i = 0; i &lt; 9; i++) {
+   console.log(i);
+   // more statements
+}
+
+</code></pre></div></div>
+
+<p>What’s wrong with <code class="language-plaintext highlighter-rouge">var i = 0</code> above? The problem is that <strong>variables declared in a for initialization have function scope</strong>, just like any <code class="language-plaintext highlighter-rouge">var</code> declaration does. In other words, they affect the scope of the entire function. Consider the following:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function outer() {
+    var x = 'outer';
+    function inner() {
+        x = 'inner';
+        //
+        // ... lots o' code
+        //
+        for (var x = 0; x &lt; 1; x++) {
+            // in for
+        }
+    }
+    inner();
+}
+
+</code></pre></div></div>
+
+<p>In the inner function, <code class="language-plaintext highlighter-rouge">x</code> shadows the outer variable <strong>throughout</strong>, not just inside the for loop. So also the initial statement <code class="language-plaintext highlighter-rouge">x = 'inner'</code> at the head of ‘inner’ affects only the locally scoped variable.</p>
+
+<p>This is a classic example of <strong><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/var#var_hoisting">var hoisting</a></strong>, which should qualify as one of JavaScript’s <a href="http://archive.oreilly.com/pub/a/javascript/excerpts/javascript-good-parts/awful-parts.html">awful parts</a>.</p>
+
+<p><strong>Don’t do it!</strong> Move all your ‘var’ statements to the head of each function, please.</p>]]></content><author><name></name></author><category term="javascript" /><summary type="html"><![CDATA[Time and time again, I see people using ‘var’ in the initialization part of a for loop. Example from MDN (Mozilla Developer Network):]]></summary></entry><entry><title type="html">A simple problem with recursive types and subtyping</title><link href="/blog/2015/06/02/a-simple-problem-with-recursive-types-and-subtyping.html" rel="alternate" type="text/html" title="A simple problem with recursive types and subtyping" /><published>2015-06-02T00:00:00+03:00</published><updated>2015-06-02T00:00:00+03:00</updated><id>/blog/2015/06/02/a-simple-problem-with-recursive-types-and-subtyping</id><content type="html" xml:base="/blog/2015/06/02/a-simple-problem-with-recursive-types-and-subtyping.html"><![CDATA[<p>Here’s a simple example of recursive types interacting badly with subtyping: <code class="language-plaintext highlighter-rouge">T={ foo: T -&gt; A} U={ foo: U -&gt; B}</code> Consider <code class="language-plaintext highlighter-rouge">T &lt;: U</code>, therefore <code class="language-plaintext highlighter-rouge">(T -&gt; A) &lt;: (U -&gt; B)</code> Which implies: <code class="language-plaintext highlighter-rouge">U &lt;: T</code> So <code class="language-plaintext highlighter-rouge">T &lt;: U</code> but also <code class="language-plaintext highlighter-rouge">U &lt;: T</code>, which is true iff <code class="language-plaintext highlighter-rouge">A &lt;: B</code> and <code class="language-plaintext highlighter-rouge">B &lt;: A</code>.</p>
+
+<p>In my case, the subtyping relation is polymorphic subsumption: <code class="language-plaintext highlighter-rouge">T</code> is subsumed by <code class="language-plaintext highlighter-rouge">U</code> iff <code class="language-plaintext highlighter-rouge">U</code> is “more polymorphic”, intuitively, it can be instantiated to all types that <code class="language-plaintext highlighter-rouge">T</code> can.</p>
+
+<p>This situation arises in rather simple code, involving polymorphic vs. non-polymorphic row fields. For example, <code class="language-plaintext highlighter-rouge">A</code> is a row with a polymorphic method, whereas <code class="language-plaintext highlighter-rouge">B</code> is a row with a monomorphic (but compatible) method, such as: <code class="language-plaintext highlighter-rouge">A = { method: forall a. a -&gt; () } B = { method: String -&gt; () }</code> In this case subsumption (the form of subtyping in play) fails.</p>
+
+<p>One way around this is to avoid subsumption issues altogether by keeping things rank-1, and not using higher-rank row fields. Unfortunately, throwing away polymorphic methods is very bad: consider a non-polymorphic <code class="language-plaintext highlighter-rouge">array.map</code> (in JS).</p>
+
+<p>A slightly better workaround is to push the foralls all the way out, keeping all types (including row types) rank-1. Every time an object method is accessed via the property syntax <code class="language-plaintext highlighter-rouge">obj.method</code>, we end up instantiating the object’s row type, and get a “fresh” type for the method. We get practically polymorphic methods. That’s the approach I’m investigating for <strong><a href="https://github.com/sinelaw/infernu">infernu</a></strong>.</p>]]></content><author><name></name></author><category term="infernu" /><summary type="html"><![CDATA[Here’s a simple example of recursive types interacting badly with subtyping: T={ foo: T -&gt; A} U={ foo: U -&gt; B} Consider T &lt;: U, therefore (T -&gt; A) &lt;: (U -&gt; B) Which implies: U &lt;: T So T &lt;: U but also U &lt;: T, which is true iff A &lt;: B and B &lt;: A.]]></summary></entry><entry><title type="html">infernu news</title><link href="/blog/2015/06/02/infernu-news.html" rel="alternate" type="text/html" title="infernu news" /><published>2015-06-02T00:00:00+03:00</published><updated>2015-06-02T00:00:00+03:00</updated><id>/blog/2015/06/02/infernu-news</id><content type="html" xml:base="/blog/2015/06/02/infernu-news.html"><![CDATA[<p>In the past month, most of the work on <a href="https://github.com/sinelaw/infernu">infernu</a> was to stabilize the type system, making decisions about some trade-offs. Here’s a short summary:</p>
+
+<ul>
+  <li><strong>Colors!</strong> I refactored all the pretty printing code to use the ansi-wl-pprint package, which fixes indentation and formatting issues and also adds ansi colors to the output. One neat thing is that identical type variables have the same color: <a href="https://noamlewis.wordpress.com/wp-content/uploads/2015/06/infernu-colors.png"><img src="images/infernu-colors.png" alt="infernu-colors" /></a></li>
+  <li>Changed the way constructor functions are treated. Until now, constructor functions were treated at definition site as regular functions. The difference between constructors and non-constructors only happened at “new” calls, where the expected “this” value was forced to be a closed row type. Unfortunately this breaks if you call “new Foo()” inside the definition of “Foo”. To avoid this issue, functions with uppercase names are now treated specially and the “this” row-type is forced to be closed when the function name is added to the environment. This allows maximum flexibility while defining Foo, while ensuring Foo’s type is closed outside the constructor to prevent junk code like <code class="language-plaintext highlighter-rouge">var x = new Foo(); x.myWrongProperty = 2;</code></li>
+  <li>Explored the idea of “Maybe” (or “optional”) types, including having common JS APIs use them for stronger safety. For example, array access should return a Maybe value. Unfortunately, since there is no syntax to construct a Maybe-typed value (no “Just”), all values can be implicitly “upgradeed” to Maybe. In other words, there is an ambiguity that break type inference. So for now, not implementing Maybe types (perhaps with explicit annotations they can come back).</li>
+  <li>Decided to disable generalization of row fields (object properties). This decision means that user-defined objects will by default <strong>not have polymorphic methods</strong>, although the object itself could be polymorphic (and thus different occurrences of the object in the program syntax, will allow instantiation to different types). The reason for this decision is that overly-polymorphic fields cause unexpected type errors, such as when passing objects that contain them as parameters to functions (contravariance can surprise you).</li>
+  <li>Started a document sketching out denotational semantics of JS, <strong>as infernu decides these should be</strong>, which helped clarify a few issues in the JS -&gt; LC translator. The next step is to change all translations to preserve semantics, currently they only preserve types.</li>
+  <li>Bug fixes: polymorphic subsumption checking, unification of recursive types.</li>
+  <li>Increased compatibility: now using base-compat and a custom prelude to increase compatibility with different GHC versions (thanks to RyanGlScott for submitting a fix to use base-orphans which prompted me to do this).</li>
+</ul>]]></content><author><name></name></author><category term="infernu" /><summary type="html"><![CDATA[In the past month, most of the work on infernu was to stabilize the type system, making decisions about some trade-offs. Here’s a short summary:]]></summary></entry><entry><title type="html">Identity Crisis</title><link href="/blog/haskell/javascript/2015/04/15/543.html" rel="alternate" type="text/html" title="Identity Crisis" /><published>2015-04-15T00:00:00+03:00</published><updated>2015-04-15T00:00:00+03:00</updated><id>/blog/haskell/javascript/2015/04/15/543</id><content type="html" xml:base="/blog/haskell/javascript/2015/04/15/543.html"><![CDATA[<p>Compared to other tools adding static types to JavaScript, <a href="https://github.com/sinelaw/infernu">Infernu’s</a> main strengths are <strong>full type inference</strong> and <strong>strong type safety</strong>. Here are a few examples.</p>
+
+<h1 id="identity-function">Identity Function</h1>
+
+<p>Here is the simplest possible function:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function id(x) {
+  return x;
+}
+</code></pre></div></div>
+
+<h2 id="typescript">TypeScript</h2>
+
+<p><a href="http://www.typescriptlang.org">TypeScript</a>’s compiler <code class="language-plaintext highlighter-rouge">tsc</code> can generate a <code class="language-plaintext highlighter-rouge">.d.ts</code> from that:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>declare function id(x: any): any;
+</code></pre></div></div>
+
+<p>That’s no good! We can pass <code class="language-plaintext highlighter-rouge">any</code> type we want to our function, but the return type is not tied to the argument type - it is treated as anything, basically untyped. So we can do this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var n = 'hi'; n = id(5);
+</code></pre></div></div>
+
+<p>And TypeScript will output the following <code class="language-plaintext highlighter-rouge">.d.ts</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>declare var n: string;
+</code></pre></div></div>
+
+<p>That seems wrong: n is assigned a number via <code class="language-plaintext highlighter-rouge">id(5)</code>. But wait - there is a way to turn off inference of <code class="language-plaintext highlighter-rouge">any</code> types (with <code class="language-plaintext highlighter-rouge">--noImplicitAny</code>). If we try that on our identity function, we get:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>id.ts(1,13): error TS7006: Parameter 'x' implicitly has an 'any' type.
+</code></pre></div></div>
+
+<h3 id="explicit-generics">Explicit Generics</h3>
+
+<p>Oops. Ok, but TypeScript has generics! Let’s try <em>that</em>: the <a href="http://www.typescriptlang.org/Handbook#generics-hello-world-of-generics">TypeScript handbook</a> gives exactly the example we need - we just <strong>write the type out explicitly</strong>, like so:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function identity&lt;T&gt;(arg: T): T {
+    return arg;
+}
+</code></pre></div></div>
+
+<p>Great! We got what we needed, but without type inference.</p>
+
+<h2 id="flow">Flow</h2>
+
+<p>Facebook’s <a href="http://flowtype.org/">Flow</a> has a type system that’s (slightly?) different from TypeScript’s, and apparently works differently. Let’s try it. We can use the <code class="language-plaintext highlighter-rouge">flow suggest</code> command to get suggested typing (I’m using version 0.7). Here’s what we get for a single file containing only the identity function above: nothing. It doesn’t suggest any type. Ok, let’s try using our <code class="language-plaintext highlighter-rouge">id</code> in a way that makes no sense, to induce an error (after all, type checkers are used to find errors). Here’s <code class="language-plaintext highlighter-rouge">bad_id.js</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* @flow */
+function id(x) { return x;}
+var n = 'hi'; n = id(5);
+var z = n; // added so we can see what flow says the type of n is here.
+
+</code></pre></div></div>
+
+<p>(Note: The <code class="language-plaintext highlighter-rouge">/* @flow */</code> header is used to tell flow that it should look at this file.) Run <code class="language-plaintext highlighter-rouge">flow suggest bad_id.js</code> and you get a diff-style output. I’ve ‘applied’ it to make it easier to read - here’s what flow suggests:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function id(x: number) : number{ return x;}
+var n: string | number = 'hi'; n = id(5);
+var z: number = n;
+
+</code></pre></div></div>
+
+<p>Interesting! We managed to get something without reverting to explicit type annotations. But we didn’t get an error!</p>
+
+<p>First, <code class="language-plaintext highlighter-rouge">id</code> was inferred to take and return <code class="language-plaintext highlighter-rouge">number</code>, apparently because that’s the only way we’ve used it. It would be interesting to see what happens when we use <code class="language-plaintext highlighter-rouge">id</code> several times with different types - we’ll try that soon.</p>
+
+<p>Second, <code class="language-plaintext highlighter-rouge">n</code> was given a union type <code class="language-plaintext highlighter-rouge">string | number</code>, because it takes on both types during its lifetime. It may be a matter of taste, but <strong>I would rather not have the type checker deduce implicit union types</strong> in this case (<code class="language-plaintext highlighter-rouge">n = 'hi'; n = 5;</code>) - instead I would expect that to be an error.</p>
+
+<p>The unique (and impressive) part is that flow is able to tell that <code class="language-plaintext highlighter-rouge">z</code> is only ever going to have <code class="language-plaintext highlighter-rouge">number</code> values, and so it’s safe to assign it that type. That’s probably a result of the flow analysis they do.</p>
+
+<p>Now let’s try calling <code class="language-plaintext highlighter-rouge">id</code> several times, with different types:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* @flow */
+function id(x) { return x;}
+id(5); id('hi');
+
+</code></pre></div></div>
+
+<p>Flow suggests:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function id(x: string | number) : string | number{ return x;}
+</code></pre></div></div>
+
+<p>Uh oh - does this means the argument and result types are no longer tied to each other? If I pass in a number, will the compiler check that I use the result only as a number (and not as a string)? Let’s try using it, doing <code class="language-plaintext highlighter-rouge">var n = id(5)</code>, flow suggests:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var n: string | number = id(5);
+
+</code></pre></div></div>
+
+<p>Despite <code class="language-plaintext highlighter-rouge">n</code> only ever being assigned a number, it now has type <code class="language-plaintext highlighter-rouge">string | number</code>. So apparently, <strong>union types propagate implicitly</strong>, infecting everything on the way.</p>
+
+<h3 id="explicit-generics-1">Explicit Generics</h3>
+
+<p>Fortunately, flow too has generics, and again <a href="http://flowtype.org/docs/functions.html#_">straight out of the manual</a> we find:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* @flow */
+function foo(x: X): X { return x; }
+
+</code></pre></div></div>
+
+<p>Great! We got what we needed, but without type inference.</p>
+
+<h1 id="infernu">Infernu</h1>
+
+<p>Let’s get down to business. Infernu says:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//       id : a.(b -&gt; b)
+function id(x) { return x; }
+
+</code></pre></div></div>
+
+<p>Cool! Without any help from us, Infernu figured out the <a href="https://en.wikipedia.org/wiki/Principal_type">most generic type</a>. Take a type <code class="language-plaintext highlighter-rouge">b</code>, return the same type <code class="language-plaintext highlighter-rouge">b</code>. The magic of polymo…<strong>Wait,</strong> what’s that <code class="language-plaintext highlighter-rouge">a.</code> thing?</p>
+
+<p>Well, JavaScript has this nice keyword called <code class="language-plaintext highlighter-rouge">this</code> which is <em>dynamically scoped</em>, meaning that <code class="language-plaintext highlighter-rouge">this</code> is bound to different things <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this">depending on <strong>how your function is invoked</strong> and not on how it’s defined</a>. For example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var obj = { hat: { type: 'top' }, getHatType: function() { return this.hat.type; } };
+obj.getHatType(); // ok.
+var f = obj.getHatType;
+f(); // oops! TypeError: Cannot read property 'type' of undefined
+
+</code></pre></div></div>
+
+<p>Nasty stuff. Every JavaScript programmer should know <code class="language-plaintext highlighter-rouge">this</code>.</p>
+
+<p>Fortunately, Infernu is here to save you. It infers not only what arguments and return types a function has, but also what <code class="language-plaintext highlighter-rouge">this</code> must be for the function call to work, and verifies that you use it correctly.</p>
+
+<p>Infernu type signatures for functions have the following format (subject to change without notice, bla bla bla):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>this.(arguments -&gt; result)
+</code></pre></div></div>
+
+<p>So for our <code class="language-plaintext highlighter-rouge">var f = obj.getHatType</code> example, Infernu says:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//  f : {hat: {type: d, ..f}, ..e}.(() -&gt; d)
+var f = obj.getHatType;
+
+</code></pre></div></div>
+
+<p>Decomposing that type signature, we read that <code class="language-plaintext highlighter-rouge">this</code> is expected to be an object containing <em>at least</em> a property called ‘hat’ which is an object with <em>at least</em> a property called ‘type’ of some type <code class="language-plaintext highlighter-rouge">d</code>. The function takes no arguments (hence the empty <code class="language-plaintext highlighter-rouge">()</code>) and returns the same type <code class="language-plaintext highlighter-rouge">d</code> that was taken from the hat.type property of <code class="language-plaintext highlighter-rouge">this</code>. (The ellipsis stuff <code class="language-plaintext highlighter-rouge">..f</code> and <code class="language-plaintext highlighter-rouge">..e</code> is due to row-type polymorphism, which will be elaborated upon in a future blog post.)</p>
+
+<p>Back to our identity function, we examine the signature again: <code class="language-plaintext highlighter-rouge">a.(b -&gt; b)</code> - the type of <code class="language-plaintext highlighter-rouge">this</code> is given an unconstrained type parameter <code class="language-plaintext highlighter-rouge">a</code> - so Infernu is telling us explicitly that <strong><code class="language-plaintext highlighter-rouge">this</code> is allowed to be anything</strong> for our identity function. Yippy!</p>
+
+<h1 id="summary">Summary</h1>
+
+<p>We saw that both TypeScript and Flow (and Google Closure too, which I haven’t shown) support generics that can express the identity function properly. They also offer weak forms of type inference that sometimes yields weakly-typed results. Infernu, on the other hand, will infer generic types automatically, and prefers to fail over giving weak typings.</p>
+
+<p>There are many known discussions about subtyping (inheritance)-based type systems, represented here by TypeScript and Flow, vs. parametric polymorphism (being Infernu in this case). There are known pros and cons to both sides: but one important result is that type inference is <strong>just easier</strong> when there is no subtyping involved.</p>
+
+<p>Infernu is designed to take advantage of that.</p>]]></content><author><name></name></author><category term="haskell" /><category term="javascript" /><category term="infernu" /><summary type="html"><![CDATA[Compared to other tools adding static types to JavaScript, Infernu’s main strengths are full type inference and strong type safety. Here are a few examples.]]></summary></entry><entry><title type="html">The wl-pprint package maintainer…</title><link href="/blog/2015/04/14/the-wl-pprint-package-maintainer.html" rel="alternate" type="text/html" title="The wl-pprint package maintainer…" /><published>2015-04-14T00:00:00+03:00</published><updated>2015-04-14T00:00:00+03:00</updated><id>/blog/2015/04/14/the-wl-pprint-package-maintainer</id><content type="html" xml:base="/blog/2015/04/14/the-wl-pprint-package-maintainer.html"><![CDATA[<p>…is now me.</p>
+
+<p>I’ve talked to the previous maintainer who is no longer interested. There was a small change required to support the new ghc (7.10), so I also released a new version. Since the new version only benefits people who need a new ghc, I also added the <strong>source-repository</strong> field in the cabal file, despite it breaking cabals older than 1.6.</p>
+
+<p>According to hackage, <a href="https://hackage.haskell.org/package/wl-pprint">wl-pprint</a> was authored by <a href="http://research.microsoft.com/en-us/people/daan/">Daan Leijen</a>. The new github repo is up at <a href="https://github.com/sinelaw/wl-pprint">https://github.com/sinelaw/wl-pprint</a>. I’ve taken the liberty of forking based on someone else’s patch for GHC 7.10 - thank you <a href="https://github.com/alexlegg">Alex Legg</a>!</p>
+
+<p>Incidentally, on hackage, there are several packages with the substring ‘wl-pprint’ in their names, some are newer and better maintained and have more features than others. This situation is rather confusing. wl-pprint itself is being used as a dependency by at least one package I need (language-ecmascript).</p>
+
+<p>It would be nice if the community converged on a single Wadler-pretty-printer package. (Probably not wl-pprint - maybe <a href="https://hackage.haskell.org/package/ansi-wl-pprint">ansi-wl-pprint</a>?)</p>]]></content><author><name></name></author><summary type="html"><![CDATA[…is now me.]]></summary></entry></feed>

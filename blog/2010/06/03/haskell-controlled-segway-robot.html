@@ -1,0 +1,9 @@
+<p>[youtube=http://www.youtube.com/watch?v=2ZblWWxeLsY]</p>
+
+<p>As part of my final project for an undergraduate degree in electrical engineering, I’ve demonstrated how FRP can be used to control a robot.</p>
+
+<p>At first I meant to use one of the existing FRP frameworks. I wrote a prototype program (a visual graph editor) using Yampa but I had a few problems with it. First, I was confused by the mess in the library’s API. There are literally dozens of functions, some with apparently overlapping purposes, and it’s hard to figure out which ones I should be using and when. Secondly, I was looking for a library that has a semantic model, or at least an approximation of one - and Yampa only has this for the basic notions of signals and signal functions, but not for many of the “magic primitives” that appear in the API, such as “pre”. Specifically, the function “pre” is problematic because it doesn’t have any logical meaning in the context of continuous time. It’s ok to say that it’s only valid in the context of discrete time, but then the function can have different effects when the system has different sampling rates.</p>
+
+<p>About the Reactive framework, from what I understand it is slightly too buggy to be useful. I hope the bugs will be fixed in Reactive and that Yampa undergoes reorganization so that these most serious attempts at implementing FRP will be more useful.</p>
+
+<p>In any case I decided to implement a small subset of the FRP ideas in my own code (the “allocated-processor” package), add bindings for OpenCV and for controlling the Segway RMP, and provide high-level functional primitives for these. The robot in the video is the result of that effort.</p>

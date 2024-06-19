@@ -1,0 +1,51 @@
+<p>Nope, nothing to do with Haskell.</p>
+
+<p>This admittedly boring post is about two specific problems with IIS 7.5 and WCF which wasted so much of my time that I thought it would be worth to  document them.</p>
+
+<p>If you have a WCF service hosted as an ASP.NET application in IIS, you may encounter the following exception on the client side:</p>
+
+<blockquote>
+  <p>System.ServiceModel.ProtocolException: The content type text/html of the response message does not match the content type of the binding (application/x-gzip). If using a custom encoder, be sure that the IsContentTypeSupported method is implemented properly. The first 75 bytes of the response were: ‘The page cannot be displayed because an internal server error has occurred.’.</p>
+
+  <p>-–&gt; System.Net.WebException: The remote server returned an error: (500) Internal Server Error.</p>
+
+  <p>at System.Net.HttpWebRequest.GetResponse() at System.ServiceModel.Channels.HttpChannelFactory.HttpRequestChannel.HttpChannelRequest.WaitForReply(TimeSpan timeout) — End of inner exception stack trace —</p>
+</blockquote>
+
+<p>The system I’m maintaining has gzip-binary-encoded data over HTTP, so the first error (ProtocolException) is due to the fact that the client expects the server to talk in gzip, but receives something else instead.</p>
+
+<p>The real problem here is that the server is returning an HTTP error (code 500) instead of something else. Upon some investigation, we found that the server has hit an exception. We have some custom behaviors on both the server and client side that ensure that all exceptions are passed to the client, so there really is no reason the client should be getting this generic 500 error. Instead, what the client always receives is a re-throw of the actual exception from the server. The only case where the same exception isn’t received by the client is when the client doesn’t know how to deserialize the exception (for example, when it is a type not known to the client).</p>
+
+<p>So why did we get an HTTP code 500 error?</p>
+
+<p>It turns out that the reason had to do with custom error pages in the IIS server that was hosting this WCF service. We had recently defined custom error handlers on our IIS server for HTTP 403. The official title for 403 is “Forbidden”, but we were actually interested in customizing a more specific variant - <a href="http://support.microsoft.com/kb/248043">403.6, which is used by IIS when an IP address is denied</a>. (By the way, IIS 6.0’s management UI allows one to define custom error pages for specific sub-codes (such as 403.6) but in IIS 7.5 you cannot set a code for a sub-code (in our case, 403 in general but not specifically for the 403.6 code). I’m not sure if setting specifically for 403.6 would have avoided the problem we encountered.)</p>
+
+<p>What happened was that every time an exception occurred in all ASP.NET applications, IIS decided to show the (arguably) pretty HTML pages instead of passing whatever exception was being thrown. The client was expecting binary, gzipped data containing either the result of the call or an exception (service fault), but instead received un-parsable HTML.</p>
+
+<p>The first thing that struck us as odd was that WCF data is being replaced with a custom error page. That may be by design, but it’s confusing. But what really puzzled us was that <strong>we had already removed the custom error page setting</strong> from the IIS. We did this using the IIS management UI - by going to the “Error Codes” feature of the website in question (not at the server level) and changing the 403 page from the file it was pointing to, back to the value it had before:</p>
+
+<blockquote>
+  <p>%SystemDrive%\inetpub\custerr\<LANGUAGE-TAG>\\403.htm</LANGUAGE-TAG></p>
+</blockquote>
+
+<p>However, when you do it this way it does <strong>not go back to the original behavior.</strong></p>
+
+<p>Here’s what you have in the web.config of that site after setting the custom error page (in this example, we set it to “/test.html”):</p>
+
+<blockquote>
+  <p>        <httpErrors> <remove statusCode="403" subStatusCode="-1"></remove> <error statusCode="403" prefixLanguageFilePath="" path="/test.html" responseMode="ExecuteURL"></error> </httpErrors></p>
+</blockquote>
+
+<p>Before we ever touched the custom error settings for our site, this entire section (<httpErrors>) did not exist in our web.config. We then tried to set it back to the default behavior, by clicking on "Insert content from static file" with the "Try to return the error file in the client language" option checked, and setting the root path to "%SystemDrive%\\inetpub\\custerr\\" and the file to "403.htm". That is exactly what the UI was showing before we ever touched this screen. You'd expect the web.config to go back to its previous configuration, but instead what we find in web.config is:</httpErrors></p>
+
+<blockquote>
+  <p>        <httpErrors> <remove statusCode="403" subStatusCode="-1"></remove> <error statusCode="403" prefixLanguageFilePath="%SystemDrive%\\inetpub\\custerr\\" path="\\403.htm" responseMode="File"></error> </httpErrors></p>
+</blockquote>
+
+<p>If we look closely at the UI we see that the corresponding error code row has the value “Local” under the “Entry Type” whereas the other rows have “Inherited”:</p>
+
+<p><a href="http://noamlewis.wordpress.com/2012/12/03/custom-error-pages-and-wcf-exceptions-in-iis-and-case-of-bad-ui/error_codes/"><img src="http://noamlewis.wordpress.com/wp-content/uploads/2012/12/error_codes1.png?w=1024" alt="error_codes" /></a></p>
+
+<p>Bottom line is that now our site is overriding the default behavior and forcing a custom error page for 403. In IIS 6 there was an option to revert to the parent’s behavior, but not in IIS 7.5. <strong>The UI provides no way to change the behavior to the inherited value.</strong> The only solution is to go into the web.config and revert the <httpErrors> section back to what it was originally - in our case, remove the section completely.</httpErrors></p>
+
+<p>Once we removed the <httpErrors> section completely, IIS reverted back to the old behavior of not using custom error pages, and then our WCF service (hosted in ASP.NET) started sending out exceptions if they occurred, instead of showing HTML error pages. Saga ends.</httpErrors></p>

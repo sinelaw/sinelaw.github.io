@@ -1,0 +1,127 @@
+<p>TL;DR: SJS is a type inference and checker for JavaScript, in early development. The core inference engine is working, but various features and support for the full browser JS environment and libraries are in the works.</p>
+
+<p>SJS (Haskell <a href="http://github.com/sinelaw/sjs">source on github</a>) is an ongoing effort to produce a practical tool for statically verifying JavaScript code. The type system is designed to support a <strong>safe subset of JS</strong>, not a superset of JS. That is, sometimes, otherwise valid JS code will not pass type checking with SJS. The reason for not allowing the full dynamic behavior of JS, is to <strong>guarantee more safety</strong> and (as a bonus) allows fully unambiguous type inference.</p>
+
+<p>The project is still in early development, but the core inference engine is more or less feature complete and the main thing that’s missing is support for all of JS’s builtin functions / methods and those that are present in a browser environment.</p>
+
+<p>Compare to:</p>
+
+<ul>
+  <li><a href="https://developers.google.com/closure/compiler/">Google Closure Compiler</a>, whose primary goal is “making JavaScript download and run faster”, but also has a pretty complex type-annotation centric type-checking feature. The type system is rather Java-like, with “shallow” or local type inference. Generics are supported at a very basic level. I should write a blog post about the features and limitations of closure. It’s a very stable project in production use at Google for several years now. I’ve used it myself on a few production projects. Written in Java. They seem to be working on a new type inference engine, but I don’t know what features it will have.</li>
+  <li><a href="https://code.facebook.com/posts/1505962329687926/flow-a-new-static-type-checker-for-javascript/">Facebook Flow</a>, which was announced a few weeks ago (just as I was putting a finishing touch on my core type checker code!), has a much more advanced (compared to closure) type checker, and seems to be based on data flow analysis. I haven’t gotten around to exploring what exactly flow does, but it seems to be much closer in design to SJS, and obviously as a project has many more resources. There are certain differences in the way flow infers types, I’ll explore those in the near future.</li>
+  <li><a href="http://www.typescriptlang.org/">TypeScript</a>: a <strong>superset</strong> of JS that translates into plain JS. Being a superset of JS means that it includes all of the awful parts of JS! <a href="https://typescript.codeplex.com/discussions/434723">I’ve asked</a> about disabling those bad features a while back (around version 0.9); from what I’ve checked, version 1.4 still seems to include them.</li>
+  <li>Other something-to-JS languages, such as <a href="http://www.purescript.org/">PureScript,</a> <a href="http://roy.brianmckenna.org/">Roy</a>, <a href="http://haste-lang.org/">Haste</a>, and <a href="https://github.com/ghcjs/ghcjs">GHCJS</a> (a full Haskell to JS compiler). These all have various advantages. SJS is aimed at being able to run the code you wrote <strong>in plain JS</strong>. There are many cases where this is either desired or required.</li>
+</ul>
+
+<p>Of all existing tools, Flow seems to be the closest to what I aim to achieve with SJS. However, SJS supports type system features such as polymorphism which are not currently supported by Flow. On the other hand, Flow has Facebook behind it, and will surely evolve in the near future.</p>
+
+<p>Closure seems to be designed for adapting an existing JS code base. They include features such as implicit union types and/or a dynamic “any” type, and as far as I know don’t infer polymorphic types. The fundamental difference between SJS and some of the alternatives is that I’ve designed SJS for <strong>more safety</strong>, by supporting a (wide) subset of JS and disallowing certain dynamic typing idioms, such as assigning values of different types to the same variable (in the future this may be relaxed a bit when the types are used in different scopes, but that’s a whole other story).</p>
+
+<p>Ok, let’s get down to the good stuff:</p>
+
+<p><strong>Features:</strong></p>
+
+<ul>
+  <li>Full type inference: no type annotations necessary.</li>
+  <li>Parametric polymorphism (aka “generics”), based on Hindley-Milner type inference.</li>
+  <li>Row-type polymorphism, otherwise known as “static duck typing”.</li>
+  <li>Recursive types for true representation of object-oriented methods.</li>
+  <li>Correct handling of JS’s <code class="language-plaintext highlighter-rouge">this</code> dynamic scoping rules.</li>
+</ul>
+
+<p>Support for type annotations for specifically constraining or for documentation is planned.</p>
+
+<p>Polymorphism is value restricted, ML-style.</p>
+
+<p>Equi-recursive types are constrained to at least include a row type in the recursion to prevent inference of evil recursive types.</p>
+
+<h2 id="examples"><a href="https://github.com/sinelaw/sjs#example"></a>Examples</h2>
+
+<p><strong>Note</strong>: An ongoing goal is to improve readability of type signatures and error messages.</p>
+
+<h3 id="basic"><a href="https://github.com/sinelaw/sjs#basic"></a>Basic</h3>
+
+<p>JavaScript:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var num = 2;
+var arrNums = [num, num];
+</code></pre></div></div>
+
+<p>SJS infers (for arrNums):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[TNumber]
+</code></pre></div></div>
+
+<p>That is, an array of numbers.</p>
+
+<p>Objects:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>var obj = { something: 'hi', value: num };
+</code></pre></div></div>
+
+<p>Inferred type:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{something: TString, value: TNumber}
+</code></pre></div></div>
+
+<p>That is, an object with two properties: ‘something’, of type string, and ‘value’ of type number.</p>
+
+<h3 id="functions-and-this"><a href="https://github.com/sinelaw/sjs#functions-and-this"></a>Functions and <code class="language-plaintext highlighter-rouge">this</code></h3>
+
+<p>In JS, <code class="language-plaintext highlighter-rouge">this</code> is one truly awful part. <code class="language-plaintext highlighter-rouge">this</code> is a dynamically scoped variable that takes on values depending on how the current function was invoked. SJS knows about this (pun intended) and infers types for functions indicating what <code class="language-plaintext highlighter-rouge">this</code> must be.</p>
+
+<p>For example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function useThisData() {
+    return this.data + 3;
+}
+</code></pre></div></div>
+
+<p>SJS infers:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(this: {data: TNumber, ..l} -&gt; TNumber)
+</code></pre></div></div>
+
+<p>In words: a function which expects <code class="language-plaintext highlighter-rouge">this</code> to be an object with at least one property, “data” of type number. It returns a number.</p>
+
+<p>If we call a function that needs <code class="language-plaintext highlighter-rouge">this</code> incorrectly, SJS will be angry:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt; useThisData();
+Error: Could not unify: {data: TNumber, ..a} with TUndefined
+</code></pre></div></div>
+
+<p>Because we called <code class="language-plaintext highlighter-rouge">useThisData</code> without a preceding object property access (e.g. <code class="language-plaintext highlighter-rouge">obj.useThisData</code>), it will get <code class="language-plaintext highlighter-rouge">undefined</code> for <code class="language-plaintext highlighter-rouge">this</code>. SJS is telling us that our expected type for <code class="language-plaintext highlighter-rouge">this</code> is not unifiable with the type <code class="language-plaintext highlighter-rouge">undefined</code>.</p>
+
+<h3 id="polymorphism"><a href="https://github.com/sinelaw/sjs#polymorphism"></a>Polymorphism</h3>
+
+<p>Given the following function:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function makeData(x) {
+    return {data: x};
+}
+</code></pre></div></div>
+
+<p>SJS infer the following type:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>((this: a, b) -&gt; {data: b})
+</code></pre></div></div>
+
+<p>In words: A function that takes anything for its <code class="language-plaintext highlighter-rouge">this</code>, and an argument of any type, call it <code class="language-plaintext highlighter-rouge">b</code>. It returns an object containing a single field, <code class="language-plaintext highlighter-rouge">data</code> of the same type <code class="language-plaintext highlighter-rouge">b</code> as the argument.</p>
+
+<h3 id="row-type-polymorphism-static-duck-typing"><a href="https://github.com/sinelaw/sjs#row-type-polymorphism-static-duck-typing"></a>Row-type polymorphism (static duck typing)</h3>
+
+<p>Given the following function:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function getData(obj) {
+    return obj.data;
+}
+</code></pre></div></div>
+
+<p>SJS infers:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>((this: h, {data: i, ..j}) -&gt; i)
+</code></pre></div></div>
+
+<p>In words: a function taking any type for <code class="language-plaintext highlighter-rouge">this</code>, and a parameter that contains <strong>at least one property</strong>, named “data” that has some type <code class="language-plaintext highlighter-rouge">i</code> (could be any type). The function returns the same type <code class="language-plaintext highlighter-rouge">i</code> as the data property.</p>
+
+<p>SJS is an ongoing project - I hope to blog about specific implementation concerns or type system features soon.</p>

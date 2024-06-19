@@ -1,0 +1,47 @@
+<p>A common pattern:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>def foo():
+    x = some value # but do we need this? (short answer: no)
+    if something:
+        # ... do stuff ...
+        x = 'bla'
+    else:
+        x = 'blo'
+
+</code></pre></div></div>
+
+<p>The variable <code class="language-plaintext highlighter-rouge">x</code> is being initialized before the if/else, but the intention of the programmer is that its value will actually be determined by the if/else itself. If somebody later comes around and mistakenly removes one of the assignments (inside ‘if’ or ‘else’), no runtime error will occur and <code class="language-plaintext highlighter-rouge">x</code> will remain initialized to a probably wrong value.</p>
+
+<p><strong>Leaving out the initialization is better</strong> - in that case, forgetting to set <code class="language-plaintext highlighter-rouge">x</code> in one of the branches will cause an <code class="language-plaintext highlighter-rouge">UnboundLocalError</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; def foo():
+...     if False:
+...         x = 0
+...     return x
+... 
+&gt;&gt;&gt; foo()
+Traceback (most recent call last):
+  File "", line 1, in 
+  File "", line 4, in foo
+UnboundLocalError: local variable 'x' referenced before assignment
+
+</code></pre></div></div>
+
+<p>Errors are good! (when they flag buggy code)</p>
+
+<p>Now, what if we <strong>also</strong> have an <code class="language-plaintext highlighter-rouge">x</code> declared in the global scope? Because of <a href="http://www.python-course.eu/python3_global_vs_local_variables.php">how Python handles variable scope</a>, the error will still happen (which is good).</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; x = 1
+&gt;&gt;&gt; def foo():
+...     if False:
+...         x = 0
+...     return x
+... 
+&gt;&gt;&gt; foo()
+Traceback (most recent call last):
+..
+UnboundLocalError: local variable 'x' referenced before assignment
+
+</code></pre></div></div>
+
+<p><strong>Summary</strong>: In Python, don’t initialize variables until you know what value to assign to them.</p>
