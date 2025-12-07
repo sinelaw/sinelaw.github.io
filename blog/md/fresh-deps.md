@@ -4,38 +4,38 @@ Building [Fresh](https://sinelaw.github.io/fresh/) would have been insanely hard
 
 Packages specifically useful for building a TUI text editor:
 
-| Crate Name | One-Line Summary | crates.io Link |
-| :--- | :--- | :--- |
-| `arboard` | Cross-platform acesss to the system clipboard (CTRL+C for the win) | [https://crates.io/crates/arboard](https://crates.io/crates/arboard) |
-| `crossterm` | Terminal manipulation, handling input, cursor movement, and colors across platforms (backend for ratatui) | [https://crates.io/crates/crossterm](https://crates.io/crates/crossterm) |
-| `deno` | TypeScript/JavaScript embeddeble runtime, used for the plugin system (`deno_ast`, `deno_core`, etc.) | [https://crates.io/crates/deno_ast](https://crates.io/crates/deno_ast) |
-| `dirs` | Abstracting away platform-specific user directories (like desktop, documents, cache) | [https://crates.io/crates/dirs](https://crates.io/crates/dirs) |
-| `ignore` | Pattern matching for files, often using `.gitignore` syntax | [https://crates.io/crates/ignore](https://crates.io/crates/ignore) |
-| `lsp-types` | Data structures corresponding to the types defined by the Language Server Protocol (LSP) | [https://crates.io/crates/lsp-types](https://crates.io/crates/lsp-types) |
-| `notify` | Cross-platform filesystem event monitor/watcher for detecting file system changes (for detecting changes and auto-reverting buffers) | [https://crates.io/crates/notify](https://crates.io/crates/notify) |
-| `pulldown-cmark`| Markdown parser (some LSP servers return markdown) | [https://crates.io/crates/pulldown-cmark](https://crates.io/crates/pulldown-cmark) |
-| `ratatui` | Full-featured Text User Interfaces (TUI) library, very cool! | [https://crates.io/crates/ratatui](https://crates.io/crates/ratatui) |
-| `syntect` | Syntax highlighting based on Sublime Text syntax definitions | [https://crates.io/crates/syntect](https://crates.io/crates/syntect) |
-| `tree-sitter` | Incrementally parsing concrete syntax trees for various languages (used in auto-indent & semantic highlighting) | [https://crates.io/crates/tree-sitter](https://crates.io/crates/tree-sitter) |
+| Crate | One-Line Summary |
+| :--- | :--- |
+| [arboard](https://crates.io/crates/arboard) | Cross-platform acesss to the system clipboard (CTRL+C for the win) |
+| [crossterm](https://crates.io/crates/crossterm) | Terminal manipulation, handling input, cursor movement, and colors across platforms (backend for ratatui) |
+| [deno](https://crates.io/crates/deno_ast) | TypeScript/JavaScript embeddeble runtime, used for the plugin system (`deno_ast`, `deno_core`, etc.) |
+| [dirs](https://crates.io/crates/dirs) | Abstracting away platform-specific user directories (like desktop, documents, cache) |
+| [ignore](https://crates.io/crates/ignore) | Pattern matching for files, often using `.gitignore` syntax |
+| [lsp-types](https://crates.io/crates/lsp-types) | Data structures corresponding to the types defined by the Language Server Protocol (LSP) |
+| [notify](https://crates.io/crates/notify) | Cross-platform filesystem event monitor/watcher for detecting file system changes (for detecting changes and auto-reverting buffers) |
+| [pulldown-cmark](https://crates.io/crates/pulldown-cmark) | Markdown parser (some LSP servers return markdown) |
+| [ratatui](https://crates.io/crates/ratatui) | Full-featured Text User Interfaces (TUI) library, very cool! |
+| [syntect](https://crates.io/crates/syntect) | Syntax highlighting based on Sublime Text syntax definitions |
+| [tree-sitter](https://crates.io/crates/tree-sitter) | Incrementally parsing concrete syntax trees for various languages (used in auto-indent & semantic highlighting) |
 
 General purpose libraries:
 
-| Crate Name | One-Line Summary | crates.io Link |
-| :--- | :--- | :--- |
-| `anyhow` | Makes it easy to align all your errors to a single type | [https://crates.io/crates/anyhow](https://crates.io/crates/anyhow) |
-| `async-trait` | Enables the use of `async` functions in Rust traits, which is currently unsupported natively | [https://crates.io/crates/async-trait](https://crates.io/crates/async-trait) |
-| `chrono` | Date and time manipulation and formatting | [https://crates.io/crates/chrono](https://crates.io/crates/chrono) |
-| `clap` | command-line arguments parsing, auto-generated help messages, and more | [https://crates.io/crates/clap](https://crates.io/crates/clap) |
-| `libc` | Low-level bindings to OS-level C standard library | [https://crates.io/crates/libc](https://crates.io/crates/libc) |
-| `libloading` | dlopen wrapper (used for libgpm dynamic loading) | [https://crates.io/crates/libloading](https://crates.io/crates/libloading) |
-| `lru` | Implements a simple, efficient Least Recently Used (LRU) cache based on a hash map and a linked list | [https://crates.io/crates/lru](https://crates.io/crates/lru) |
-| `nix` | Bindings to Unix-like OS APIs (e.g., processes, file descriptors) | [https://crates.io/crates/nix](https://crates.io/crates/nix) |
-| `regex` | Regular expression engine | [https://crates.io/crates/regex](https://crates.io/crates/regex) |
-| `schemars` | Used for generating JSON Schema from Rust data structures for API validation and documentation (config.json autogenerated parser)| [https://crates.io/crates/schemars](https://crates.io/crates/schemars) |
-| `serde` | Serializing/deserializing data structures efficiently, including json (with sede_json) | [https://crates.io/crates/serde](https://crates.io/crates/serde) |
-| `sha2` | SHA-256, SHA-512, etc. | [https://crates.io/crates/sha2](https://crates.io/crates/sha2) |
-| `tokio` | Asynchronous runtime for concurrency (e.g. use it for async IO) | [https://crates.io/crates/tokio](https://crates.io/crates/tokio) |
-| `tracing` | Tracing and structured logging (also using `tracing-subscriber`)| [https://crates.io/crates/tracing](https://crates.io/crates/tracing) |
+| Crate | One-Line Summary |
+| :--- | :--- |
+| [anyhow](https://crates.io/crates/anyhow) | Makes it easy to align all your errors to a single type |
+| [async-trait](https://crates.io/crates/async-trait) | Enables the use of `async` functions in Rust traits, which is currently unsupported natively |
+| [chrono](https://crates.io/crates/chrono) | Date and time manipulation and formatting |
+| [clap](https://crates.io/crates/clap) | command-line arguments parsing, auto-generated help messages, and more |
+| [libc](https://crates.io/crates/libc) | Low-level bindings to OS-level C standard library |
+| [libloading](https://crates.io/crates/libloading) | dlopen wrapper (used for libgpm dynamic loading) |
+| [lru](https://crates.io/crates/lru) | Implements a simple, efficient Least Recently Used (LRU) cache based on a hash map and a linked list |
+| [nix](https://crates.io/crates/nix) | Bindings to Unix-like OS APIs (e.g., processes, file descriptors) |
+| [regex](https://crates.io/crates/regex) | Regular expression engine |
+| [schemars](https://crates.io/crates/schemars) | Used for generating JSON Schema from Rust data structures for API validation and documentation (config.json autogenerated parser) |
+| [serde](https://crates.io/crates/serde) | Serializing/deserializing data structures efficiently, including json (with sede_json) |
+| [sha2](https://crates.io/crates/sha2) | SHA-256, SHA-512, etc. |
+| [tokio](https://crates.io/crates/tokio) | Asynchronous runtime for concurrency (e.g. use it for async IO) |
+| [tracing](https://crates.io/crates/tracing) | Tracing and structured logging (also using `tracing-subscriber`) |
 
 
 Thanks to all these projects - and their maintainers :)

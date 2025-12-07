@@ -1,3 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>a simple bash script for monitoring the output of a running process - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">March 19, 2015</p>
 <p><a href="https://noamlewis.wordpress.com/wp-content/uploads/2015/03/ezgif-com-crop.gif"><img src="images/ezgif-com-crop.gif" alt="tailor.sh example" /></a>I got tired of my screen getting flooded with text when all I wanted was to see the last output line <strong>at any given time</strong>. What I really want is to just see one output line and have it replaced with some newer text when it’s available. So I wrote a script (in, ahem, bash) that lets your do exactly this. Call it “tailor.sh” or whatever you want:</p>
 
 <p>(If the code below is screwed up, <a href="https://gist.github.com/sinelaw/12b7957950c5103e7b46">see it here on gist</a>)</p>
@@ -19,3 +43,14 @@ exit $EXIT_CODE
 </code></pre></div></div>
 
 <p>I use it in a test env bringup script to run some builds. Instead of having to lose all the context of the wrapping script, I now see just a single output line of the invoked builds at any given time.</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>

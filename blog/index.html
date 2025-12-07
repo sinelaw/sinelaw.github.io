@@ -1,295 +1,630 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en">
+<head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>Noam Lewis - The Blog</title>
-<meta name="generator" content="Jekyll v4.3.3" />
-<meta property="og:title" content="Noam Lewis - The Blog" />
-<meta property="og:locale" content="en_US" />
-<link rel="canonical" href="/blog/" />
-<meta property="og:url" content="/blog/" />
-<meta property="og:site_name" content="Noam Lewis - The Blog" />
-<meta property="og:type" content="website" />
-<meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="Noam Lewis - The Blog" />
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","headline":"Noam Lewis - The Blog","name":"Noam Lewis - The Blog","url":"/blog/"}</script>
-<!-- End Jekyll SEO tag -->
-<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/blog/feed.xml" title="Noam Lewis - The Blog" /></head>
-<body><header class="site-header" role="banner">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Noam Lewis - The Blog</title>
+  
+  <!-- Tailwind CSS is included here to provide a lightweight, modern base,
+       but custom CSS will be used for the slick, precise layout. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* * MODERN BLOG STYLES 
+     * Target: Slick, Clean White, Lightweight, High Readability
+     */
 
-  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Noam Lewis - The Blog</a><nav class="site-nav">
-        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
-        <label for="nav-trigger">
-          <span class="menu-icon">
-            <svg viewBox="0 0 18 15" width="18px" height="15px">
-              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
-            </svg>
-          </span>
-        </label>
+    /* --- 1. BASE AND TYPOGRAPHY --- */
+    :root {
+      --content-width: 760px;
+      --color-text-dark: #2c3e50; /* Slightly softer dark blue/grey than pure black */
+      --color-text-light: #7f8c8d; /* Muted grey for dates/meta */
+      --color-link: #3498db; /* Clean, professional blue */
+      --color-link-hover: #2980b9;
+      --color-divider: #ecf0f1; /* Very light border grey */
+    }
 
-        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
-      </nav></div>
-</header>
-<main class="page-content" aria-label="Content">
-      <div class="wrapper">
-        <div class="home">
-<h2 class="post-list-heading">Posts</h2>
-    <ul class="post-list"><li><span class="post-meta">Oct 5, 2017</span>
-        <h3>
-          <a class="post-link" href="/blog/2017/10/05/type-safe-enums-in-c-using-a-clang-plugin.html">
-            Type-safe enums in C, using a clang plugin
-          </a>
-        </h3></li><li><span class="post-meta">Aug 11, 2017</span>
-        <h3>
-          <a class="post-link" href="/blog/2017/08/11/safer-c-programming.html">
-            Safer C programming
-          </a>
-        </h3></li><li><span class="post-meta">Oct 1, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/10/01/const-when-you-need-it.html">
-            Const when you need it
-          </a>
-        </h3></li><li><span class="post-meta">Sep 24, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/09/24/two-implementations-of-dhm-type-inference.html">
-            Two implementations of DHM type inference
-          </a>
-        </h3></li><li><span class="post-meta">Jun 23, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/06/23/in-python-dont-initialize-local-variables-unnecessarily.html">
-            In Python, don&#39;t initialize local variables unnecessarily
-          </a>
-        </h3></li><li><span class="post-meta">Jun 15, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/javascript/2015/06/15/beware-of-var-in-for-loops-js-programmers.html">
-            Beware of &#39;var&#39; in for loops, JS programmers
-          </a>
-        </h3></li><li><span class="post-meta">Jun 2, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/06/02/infernu-news.html">
-            infernu news
-          </a>
-        </h3></li><li><span class="post-meta">Jun 2, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/06/02/a-simple-problem-with-recursive-types-and-subtyping.html">
-            A simple problem with recursive types and subtyping
-          </a>
-        </h3></li><li><span class="post-meta">Apr 15, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/javascript/2015/04/15/543.html">
-            Identity Crisis
-          </a>
-        </h3></li><li><span class="post-meta">Apr 14, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/04/14/the-wl-pprint-package-maintainer.html">
-            The wl-pprint package maintainer...
-          </a>
-        </h3></li><li><span class="post-meta">Apr 7, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/04/07/type-guards-are-not-inferable.html">
-            Type guards are not inferable
-          </a>
-        </h3></li><li><span class="post-meta">Mar 24, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/03/24/infernus-type-system-informal-summary-first-draft.html">
-            Infernu&#39;s type system informal summary - first draft
-          </a>
-        </h3></li><li><span class="post-meta">Mar 19, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/03/19/a-simple-bash-script-for-monitoring-the-output-of-a-running-process.html">
-            A simple bash script for monitoring the output of a running process
-          </a>
-        </h3></li><li><span class="post-meta">Feb 19, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/02/19/ad-hoc-polymorphism-type-families-ambiguous-types-and-javascript.html">
-            Ad-hoc polymorphism, type families, ambiguous types, and Javascript
-          </a>
-        </h3></li><li><span class="post-meta">Feb 9, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/02/09/inferny-because-the-other-name-tm-is-already-being-used.html">
-            Inference of &#39;new&#39; statements, and ambiguous types
-          </a>
-        </h3></li><li><span class="post-meta">Jan 27, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/javascript/2015/01/27/sjs-is-now-known-as-inferno.html">
-            SJS is now known as Inferno
-          </a>
-        </h3></li><li><span class="post-meta">Jan 25, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/01/25/ok-internet-i-heard-you-i-need-a-new-name-for-the-js-type-infererchecker.html">
-            Ok, Internet, I heard you. I need a new name for the JS type inferer/checker.
-          </a>
-        </h3></li><li><span class="post-meta">Jan 19, 2015</span>
-        <h3>
-          <a class="post-link" href="/blog/2015/01/19/introducing-sjs-a-type-inferer-and-checker-for-javascript.html">
-            Introducing SJS, a type inferer and checker for JavaScript (written in Haskell)
-          </a>
-        </h3></li><li><span class="post-meta">Aug 16, 2014</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/2014/08/16/xml-to-json-new-version-released-constant-memory-usage.html">
-            xml-to-json - new version released, constant memory usage
-          </a>
-        </h3></li><li><span class="post-meta">Apr 8, 2014</span>
-        <h3>
-          <a class="post-link" href="/blog/2014/04/08/generate-javascript-classes-for-your-net-types.html">
-            Generate Javascript classes for your .NET types
-          </a>
-        </h3></li><li><span class="post-meta">Mar 6, 2014</span>
-        <h3>
-          <a class="post-link" href="/blog/javascript/2014/03/06/jammed-the-simple-traffic-simulator.html">
-            Jammed, the simple traffic simulator
-          </a>
-        </h3></li><li><span class="post-meta">Jan 19, 2014</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/javascript/2014/01/19/xml-to-json-is-now-a-library.html">
-            xml-to-json is now a library
-          </a>
-        </h3></li><li><span class="post-meta">Dec 18, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/2013/12/18/c-pitfalls-compiler-bugs-net-gotchas.html">
-            C# Pitfalls, Compiler Bugs &amp;amp; .NET gotchas
-          </a>
-        </h3></li><li><span class="post-meta">Nov 18, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/2013/11/18/flat-design-sucks.html">
-            Flat design sucks.
-          </a>
-        </h3></li><li><span class="post-meta">Apr 15, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/javascript/2013/04/15/brackets-a-great-editor-for-javascript-html-and-css.html">
-            Brackets - a great editor for Javascript, HTML and CSS
-          </a>
-        </h3></li><li><span class="post-meta">Mar 24, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/2013/03/24/windows-8-is-the-worst-for-desktopslaptops.html">
-            Windows 8 is the worst.
-          </a>
-        </h3></li><li><span class="post-meta">Mar 20, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/2013/03/20/firefox-middle-click-to-open-new-tab-vs-annoying-auto-scroll-feature.html">
-            Firefox: Middle click to open new tab VS. annoying auto scroll feature
-          </a>
-        </h3></li><li><span class="post-meta">Mar 11, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/math/2013/03/11/penalty-search-part-4-and-finale-the-x-section-algorithm.html">
-            Penalty search, part 4 and finale: the x-section algorithm
-          </a>
-        </h3></li><li><span class="post-meta">Feb 22, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/math/2013/02/22/penalty-search-part-3-exploring-linear-cost.html">
-            Penalty search, part 3: exploring linear cost
-          </a>
-        </h3></li><li><span class="post-meta">Feb 12, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/math/2013/02/12/penalty-search-problem-revisited-dynamic-programming-control-parallel-to-the-rescue.html">
-            Penalty-search problem revisited: Dynamic Programming &amp;amp; Control.Parallel to the rescue
-          </a>
-        </h3></li><li><span class="post-meta">Feb 4, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/math/2013/02/04/finding-the-perfect-baking-time-for-that-souffle-or-optimal-search-with-test-penalty.html">
-            Finding the perfect baking time for that soufflé (or: optimal search with test penalty)
-          </a>
-        </h3></li><li><span class="post-meta">Jan 24, 2013</span>
-        <h3>
-          <a class="post-link" href="/blog/2013/01/24/git-admin-an-alias-for-running-git-commands-as-a-privileged-ssh-identity.html">
-            git admin: An alias for running git commands as a privileged SSH identity
-          </a>
-        </h3></li><li><span class="post-meta">Dec 16, 2012</span>
-        <h3>
-          <a class="post-link" href="/blog/haskell/2012/12/16/cabal-install-ftgl-on-windows-and-getting-exes-that-use-it-to-work.html">
-            cabal install FTGL on Windows, and getting exe&#39;s that use it to work
-          </a>
-        </h3></li><li><span class="post-meta">Dec 3, 2012</span>
-        <h3>
-          <a class="post-link" href="/blog/net/2012/12/03/custom-error-pages-and-wcf-exceptions-in-iis-and-case-of-bad-ui.html">
-            Custom error pages and WCF exceptions in IIS, and a case of bad UI
-          </a>
-        </h3></li><li><span class="post-meta">Sep 19, 2012</span>
-        <h3>
-          <a class="post-link" href="/blog/2012/09/19/introducing-popsimple-an-experiment-in-web-content-mashup.html">
-            Introducing PopSimple: An experiment in web content mashup
-          </a>
-        </h3></li><li><span class="post-meta">Jul 18, 2012</span>
-        <h3>
-          <a class="post-link" href="/blog/net/2012/07/18/net-4-5-improves-orm-performance-across-the-chart.html">
-            .NET 4.5 improves ORM performance across the charts
-          </a>
-        </h3></li><li><span class="post-meta">May 21, 2012</span>
-        <h3>
-          <a class="post-link" href="/blog/2012/05/21/my-git-aliases.html">
-            My Git Aliases
-          </a>
-        </h3></li><li><span class="post-meta">Jan 23, 2012</span>
-        <h3>
-          <a class="post-link" href="/blog/2012/01/23/when-to-scroll-the-problem-of-infinite-sized-ui-elements-inside-a-scrollviewer.html">
-            When to scroll? The problem of infinite-sized UI elements inside a scrollviewer
-          </a>
-        </h3></li><li><span class="post-meta">Jun 23, 2011</span>
-        <h3>
-          <a class="post-link" href="/blog/frp/2011/06/23/i-robot.html">
-            I, Robot
-          </a>
-        </h3></li><li><span class="post-meta">Mar 22, 2011</span>
-        <h3>
-          <a class="post-link" href="/blog/2011/03/22/how-to-use-kdiff3-as-a-difftool-mergetool-with-cygwin-git.html">
-            How to use kdiff3 as a difftool / mergetool with cygwin git
-          </a>
-        </h3></li><li><span class="post-meta">Mar 22, 2011</span>
-        <h3>
-          <a class="post-link" href="/blog/2011/03/22/how-to-run-any-windows-program-from-cygwin-still-using-cygwin-style-path.html">
-            How to run any windows program from cygwin, still using cygwin-style path
-          </a>
-        </h3></li><li><span class="post-meta">Jun 13, 2010</span>
-        <h3>
-          <a class="post-link" href="/blog/frp/2010/06/13/axioms-for-frp-discussing-insensitivity.html">
-            Axioms for FRP: Discussing insensitivity
-          </a>
-        </h3></li><li><span class="post-meta">Jun 9, 2010</span>
-        <h3>
-          <a class="post-link" href="/blog/frp/2010/06/09/axiomatic-basis-for-frp.html">
-            Axiomatic basis for FRP
-          </a>
-        </h3></li><li><span class="post-meta">Jun 3, 2010</span>
-        <h3>
-          <a class="post-link" href="/blog/2010/06/03/haskell-controlled-segway-robot.html">
-            Haskell-controlled Segway robot
-          </a>
-        </h3></li><li><span class="post-meta">Mar 21, 2010</span>
-        <h3>
-          <a class="post-link" href="/blog/frp/2010/03/21/point-wise-frp-plus-memory-part-1.html">
-            Point-wise FRP, plus memory - Part 1
-          </a>
-        </h3></li></ul>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      line-height: 1.6;
+      color: var(--color-text-dark);
+      background-color: #ffffff;
+      margin: 0;
+    }
 
-    <p class="rss-subscribe">subscribe <a href="/blog/feed.xml">via RSS</a></p></div>
+    /* Override Jekyll's default wrapper padding */
+    .wrapper {
+      max-width: var(--content-width); 
+      margin: 0 auto;
+      padding: 0 20px;
+    }
 
-      </div>
-    </main><footer class="site-footer h-card">
-  <data class="u-url" href="/blog/"></data>
+    a {
+      color: var(--color-link);
+      text-decoration: none;
+      transition: color 0.15s ease-in-out;
+    }
 
+    a:hover {
+      color: var(--color-link-hover);
+      text-decoration: underline;
+    }
+
+    /* --- 2. HEADER AND NAVIGATION --- */
+
+    .site-header {
+      border-bottom: 1px solid var(--color-divider);
+      padding: 40px 0 20px 0;
+      margin-bottom: 30px;
+    }
+
+    .site-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      margin: 0;
+      letter-spacing: -0.02em; /* Subtle tightening for a modern look */
+    }
+
+    .site-nav {
+      font-size: 1rem;
+      /* Using flex to place nav items inline for slickness */
+      display: flex;
+      gap: 15px; 
+    }
+    
+    .menu-icon, #nav-trigger {
+      /* Hide the default mobile menu icon, focusing on desktop first */
+      display: none;
+    }
+
+    .trigger {
+      margin-left: auto;
+    }
+
+    .page-link {
+      color: var(--color-text-dark);
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+
+    .page-link:hover {
+      background-color: #f7f9fb;
+      text-decoration: none;
+    }
+
+    /* --- 3. POST LIST LAYOUT (The Core Improvement) --- */
+
+    .home {
+      padding-bottom: 50px;
+    }
+
+    .post-list-heading {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--color-text-dark);
+      margin-top: 20px;
+      margin-bottom: 40px;
+      /* Remove bottom line and let the items provide the structure */
+    }
+
+    .post-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .post-list li {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--color-divider); /* Very light separator */
+      display: flex; /* Use Flexbox for two-column alignment */
+      align-items: center; /* Vertically align date and title */
+      transition: background-color 0.2s ease;
+    }
+    
+    .post-list li:hover {
+        background-color: #fcfdff; /* Subtle highlight on hover */
+    }
+
+    .post-list li:last-child {
+      border-bottom: none;
+    }
+
+    .post-meta {
+      font-size: 0.9rem;
+      color: var(--color-text-light); /* Muted date */
+      min-width: 130px; /* Fixed width for consistent alignment */
+      padding-right: 40px;
+      white-space: nowrap;
+    }
+
+    .post-list h3 {
+      flex-grow: 1;
+      font-size: 1.15rem; /* Slightly smaller for slickness */
+      font-weight: 500;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .post-list .post-link {
+      color: var(--color-text-dark);
+    }
+
+    .post-list .post-link:hover {
+      color: var(--color-link-hover);
+      text-decoration: none;
+    }
+
+    .rss-subscribe {
+      margin-top: 30px;
+      font-size: 0.95rem;
+      text-align: right;
+    }
+
+    /* --- 4. FOOTER --- */
+    .site-footer {
+      border-top: 1px solid var(--color-divider);
+      padding-top: 30px;
+      padding-bottom: 50px;
+      font-size: 0.9rem;
+      color: var(--color-text-light);
+    }
+    
+    .footer-heading {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--color-text-dark);
+    }
+
+    /* --- 5. RESPONSIVENESS (for phone screens) --- */
+    @media (max-width: 600px) {
+      .site-header {
+        padding: 30px 0 15px 0;
+      }
+      .site-title {
+        font-size: 1.5rem;
+      }
+      .post-list li {
+        flex-direction: column; /* Stack date and title vertically */
+        align-items: flex-start;
+      }
+
+      .post-meta {
+        padding-right: 0;
+        margin-bottom: 5px;
+        min-width: auto;
+      }
+      
+      .post-list h3 {
+        font-size: 1.1rem;
+      }
+      
+      .wrapper {
+        padding: 0 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+<!-- Reusing the exact content structure from your original file -->
+
+<header class="site-header" role="banner">
   <div class="wrapper">
+    <a class="site-title" rel="author" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <!-- The menu toggle is simplified for this clean desktop layout -->
+      <div class="trigger">
+        <a class="page-link" href="/blog/about/">About</a>
+      </div>
+    </nav>
+  </div>
+</header>
 
+<main class="page-content" aria-label="Content">
+  <div class="wrapper">
+    <div class="home">
+      <h2 class="post-list-heading">Posts</h2>
+      <ul class="post-list"><li><span class="post-meta">Dec 7, 2025</span>
+        <h3>
+          <a class="post-link" href="/blog/2025/12/07/the-open-source-libraries-powering-fresh.html">
+            The Open-Source Libraries Powering Fresh
+          </a>
+        </h3></li>
+        <li>
+          <span class="post-meta">Oct 5, 2017</span>
+          <h3>
+            <a class="post-link" href="/blog/2017/10/05/type-safe-enums-in-c-using-a-clang-plugin.html">
+              Type-safe enums in C, using a clang plugin
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Aug 11, 2017</span>
+          <h3>
+            <a class="post-link" href="/blog/2017/08/11/safer-c-programming.html">
+              Safer C programming
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Oct 1, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/10/01/const-when-you-need-it.html">
+              Const when you need it
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Sep 24, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/09/24/two-implementations-of-dhm-type-inference.html">
+              Two implementations of DHM type inference
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jun 23, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/06/23/in-python-dont-initialize-local-variables-unnecessarily.html">
+              In Python, don&#39;t initialize local variables unnecessarily
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jun 15, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/javascript/2015/06/15/beware-of-var-in-for-loops-js-programmers.html">
+              Beware of &#39;var&#39; in for loops, JS programmers
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jun 2, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/06/02/infernu-news.html">
+              infernu news
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jun 2, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/06/02/a-simple-problem-with-recursive-types-and-subtyping.html">
+              A simple problem with recursive types and subtyping
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Apr 15, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/javascript/2015/04/15/543.html">
+              Identity Crisis
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Apr 14, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/04/14/the-wl-pprint-package-maintainer.html">
+              The wl-pprint package maintainer...
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Apr 7, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/04/07/type-guards-are-not-inferable.html">
+              Type guards are not inferable
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 24, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/03/24/infernus-type-system-informal-summary-first-draft.html">
+              Infernu&#39;s type system informal summary - first draft
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 19, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/03/19/a-simple-bash-script-for-monitoring-the-output-of-a-running-process.html">
+              A simple bash script for monitoring the output of a running process
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Feb 19, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/02/19/ad-hoc-polymorphism-type-families-ambiguous-types-and-javascript.html">
+              Ad-hoc polymorphism, type families, ambiguous types, and Javascript
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Feb 9, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/02/09/inferny-because-the-other-name-tm-is-already-being-used.html">
+              Inference of &#39;new&#39; statements, and ambiguous types
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jan 27, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/javascript/2015/01/27/sjs-is-now-known-as-inferno.html">
+              SJS is now known as Inferno
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jan 25, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/01/25/ok-internet-i-heard-you-i-need-a-new-name-for-the-js-type-infererchecker.html">
+              Ok, Internet, I heard you. I need a new name for the JS type inferer/checker.
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jan 19, 2015</span>
+          <h3>
+            <a class="post-link" href="/blog/2015/01/19/introducing-sjs-a-type-inferer-and-checker-for-javascript.html">
+              Introducing SJS, a type inferer and checker for JavaScript (written in Haskell)
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Aug 16, 2014</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/2014/08/16/xml-to-json-new-version-released-constant-memory-usage.html">
+              xml-to-json - new version released, constant memory usage
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Apr 8, 2014</span>
+          <h3>
+            <a class="post-link" href="/blog/2014/04/08/generate-javascript-classes-for-your-net-types.html">
+              Generate Javascript classes for your .NET types
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 6, 2014</span>
+          <h3>
+            <a class="post-link" href="/blog/javascript/2014/03/06/jammed-the-simple-traffic-simulator.html">
+              Jammed, the simple traffic simulator
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jan 19, 2014</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/javascript/2014/01/19/xml-to-json-is-now-a-library.html">
+              xml-to-json is now a library
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Dec 18, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/2013/12/18/c-pitfalls-compiler-bugs-net-gotchas.html">
+              C# Pitfalls, Compiler Bugs &amp;amp; .NET gotchas
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Nov 18, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/2013/11/18/flat-design-sucks.html">
+              Flat design sucks.
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Apr 15, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/javascript/2013/04/15/brackets-a-great-editor-for-javascript-html-and-css.html">
+              Brackets - a great editor for Javascript, HTML and CSS
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 24, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/2013/03/24/windows-8-is-the-worst-for-desktopslaptops.html">
+              Windows 8 is the worst.
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 20, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/2013/03/20/firefox-middle-click-to-open-new-tab-vs-annoying-auto-scroll-feature.html">
+              Firefox: Middle click to open new tab VS. annoying auto scroll feature
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 11, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/math/2013/03/11/penalty-search-part-4-and-finale-the-x-section-algorithm.html">
+              Penalty search, part 4 and finale: the x-section algorithm
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Feb 22, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/math/2013/02/22/penalty-search-part-3-exploring-linear-cost.html">
+              Penalty search, part 3: exploring linear cost
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Feb 12, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/math/2013/02/12/penalty-search-problem-revisited-dynamic-programming-control-parallel-to-the-rescue.html">
+              Penalty-search problem revisited: Dynamic Programming &amp;amp; Control.Parallel to the rescue
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Feb 4, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/math/2013/02/04/finding-the-perfect-baking-time-for-that-soufflé-or-optimal-search-with-test-penalty.html">
+              Finding the perfect baking time for that soufflé (or: optimal search with test penalty)
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jan 24, 2013</span>
+          <h3>
+            <a class="post-link" href="/blog/2013/01/24/git-admin-an-alias-for-running-git-commands-as-a-privileged-ssh-identity.html">
+              git admin: An alias for running git commands as a privileged SSH identity
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Dec 16, 2012</span>
+          <h3>
+            <a class="post-link" href="/blog/haskell/2012/12/16/cabal-install-ftgl-on-windows-and-getting-exes-that-use-it-to-work.html">
+              cabal install FTGL on Windows, and getting exe&#39;s that use it to work
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Dec 3, 2012</span>
+          <h3>
+            <a class="post-link" href="/blog/net/2012/12/03/custom-error-pages-and-wcf-exceptions-in-iis-and-case-of-bad-ui.html">
+              Custom error pages and WCF exceptions in IIS, and a case of bad UI
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Sep 19, 2012</span>
+          <h3>
+            <a class="post-link" href="/blog/2012/09/19/introducing-popsimple-an-experiment-in-web-content-mashup.html">
+              Introducing PopSimple: An experiment in web content mashup
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jul 18, 2012</span>
+          <h3>
+            <a class="post-link" href="/blog/net/2012/07/18/net-4-5-improves-orm-performance-across-the-chart.html">
+              .NET 4.5 improves ORM performance across the charts
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">May 21, 2012</span>
+          <h3>
+            <a class="post-link" href="/blog/2012/05/21/my-git-aliases.html">
+              My Git Aliases
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jan 23, 2012</span>
+          <h3>
+            <a class="post-link" href="/blog/2012/01/23/when-to-scroll-the-problem-of-infinite-sized-ui-elements-inside-a-scrollviewer.html">
+              When to scroll? The problem of infinite-sized UI elements inside a scrollviewer
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jun 23, 2011</span>
+          <h3>
+            <a class="post-link" href="/blog/frp/2011/06/23/i-robot.html">
+              I, Robot
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 22, 2011</span>
+          <h3>
+            <a class="post-link" href="/blog/2011/03/22/how-to-use-kdiff3-as-a-difftool-mergetool-with-cygwin-git.html">
+              How to use kdiff3 as a difftool / mergetool with cygwin git
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 22, 2011</span>
+          <h3>
+            <a class="post-link" href="/blog/2011/03/22/how-to-run-any-windows-program-from-cygwin-still-using-cygwin-style-path.html">
+              How to run any windows program from cygwin, still using cygwin-style path
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jun 13, 2010</span>
+          <h3>
+            <a class="post-link" href="/blog/frp/2010/06/13/axioms-for-frp-discussing-insensitivity.html">
+              Axioms for FRP: Discussing insensitivity
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jun 9, 2010</span>
+          <h3>
+            <a class="post-link" href="/blog/frp/2010/06/09/axiomatic-basis-for-frp.html">
+              Axiomatic basis for FRP
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Jun 3, 2010</span>
+          <h3>
+            <a class="post-link" href="/blog/2010/06/03/haskell-controlled-segway-robot.html">
+              Haskell-controlled Segway robot
+            </a>
+          </h3>
+        </li>
+        <li>
+          <span class="post-meta">Mar 21, 2010</span>
+          <h3>
+            <a class="post-link" href="/blog/frp/2010/03/21/point-wise-frp-plus-memory-part-1.html">
+              Point-wise FRP, plus memory - Part 1
+            </a>
+          </h3>
+        </li>
+      </ul>
+
+      <p class="rss-subscribe">subscribe <a href="/blog/feed.xml">via RSS</a></p>
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+  <div class="wrapper">
     <h2 class="footer-heading">Noam Lewis - The Blog</h2>
-
     <div class="footer-col-wrapper">
       <div class="footer-col footer-col-1">
         <ul class="contact-list">
-          <li class="p-name">Noam Lewis - The Blog</li></ul>
+          <li class="p-name">Noam Lewis - The Blog</li>
+        </ul>
       </div>
-
-      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/sinelaw"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">sinelaw</span></a></li></ul>
-</div>
-
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          <li>
+            <a href="https://github.com/sinelaw">
+              <span class="username">sinelaw</span>
+            </a>
+          </li>
+        </ul>
+      </div>
       <div class="footer-col footer-col-3">
         <p></p>
       </div>
     </div>
-
   </div>
-
 </footer>
-</body>
 
-</html>
+</body>

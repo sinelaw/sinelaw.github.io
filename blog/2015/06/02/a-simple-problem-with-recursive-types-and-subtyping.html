@@ -1,3 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>a simple problem with recursive types and subtyping - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">June 2, 2015</p>
 <p>Here’s a simple example of recursive types interacting badly with subtyping: <code class="language-plaintext highlighter-rouge">T={ foo: T -&gt; A} U={ foo: U -&gt; B}</code> Consider <code class="language-plaintext highlighter-rouge">T &lt;: U</code>, therefore <code class="language-plaintext highlighter-rouge">(T -&gt; A) &lt;: (U -&gt; B)</code> Which implies: <code class="language-plaintext highlighter-rouge">U &lt;: T</code> So <code class="language-plaintext highlighter-rouge">T &lt;: U</code> but also <code class="language-plaintext highlighter-rouge">U &lt;: T</code>, which is true iff <code class="language-plaintext highlighter-rouge">A &lt;: B</code> and <code class="language-plaintext highlighter-rouge">B &lt;: A</code>.</p>
 
 <p>In my case, the subtyping relation is polymorphic subsumption: <code class="language-plaintext highlighter-rouge">T</code> is subsumed by <code class="language-plaintext highlighter-rouge">U</code> iff <code class="language-plaintext highlighter-rouge">U</code> is “more polymorphic”, intuitively, it can be instantiated to all types that <code class="language-plaintext highlighter-rouge">T</code> can.</p>
@@ -7,3 +31,14 @@
 <p>One way around this is to avoid subsumption issues altogether by keeping things rank-1, and not using higher-rank row fields. Unfortunately, throwing away polymorphic methods is very bad: consider a non-polymorphic <code class="language-plaintext highlighter-rouge">array.map</code> (in JS).</p>
 
 <p>A slightly better workaround is to push the foralls all the way out, keeping all types (including row types) rank-1. Every time an object method is accessed via the property syntax <code class="language-plaintext highlighter-rouge">obj.method</code>, we end up instantiating the object’s row type, and get a “fresh” type for the method. We get practically polymorphic methods. That’s the approach I’m investigating for <strong><a href="https://github.com/sinelaw/infernu">infernu</a></strong>.</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>

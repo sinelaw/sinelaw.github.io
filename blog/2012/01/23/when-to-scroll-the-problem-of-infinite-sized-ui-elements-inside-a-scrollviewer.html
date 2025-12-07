@@ -1,3 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>when to scroll the problem of infinite sized ui elements inside a scrollviewer - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">January 23, 2012</p>
 <p>While refactoring a WPF application, I’ve stumbled into a general problem in UI layout.</p>
 
 <p>WPF has an element called ScrollViewer, which is basically a panel that contains elements and shows scroll bars when the content inside is too big to fit in the size of the ScrollViewer’s visible area. Consider the following three cases.</p>
@@ -175,3 +199,14 @@ Then:
 <p>What I’d expect is that there would be some property on UI controls specifying whether or not this element can expand infinitely (in height, width, or both). If any node in the UI’s element containment tree has this “infinite size” property set, then the ScrollViewer that contains this tree must act using the dual behavior and must have a minimum size defined (smaller size means we allow scrolling and set the content exactly to the minimum size; bigger-than-minimum size means we don’t allow scrolling and give the content whatever space we have and no more). If the “infinite size” property, propagated to the ScrollViewer from the contained tree is <em>not</em> set, the ScrollViewer acts like a regular ScrollViewer - allowing the content to grow to whatever size it needs, and showing scroll bars if needed.</p>
 
 <p>For now, since there is no such feature in WPF, I’ll be using the aforementioned ScrollViewer behavior with appropriately defined minimum sizes for those screens that need them - hard coded, ugly, but works.</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>

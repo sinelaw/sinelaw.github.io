@@ -1,3 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>git admin an alias for running git commands as a privileged ssh identity - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">January 24, 2013</p>
 <p>So, you want to allow some person less-privileged access to your git repository. For example, you don’t want anyone pushing to master except a select few. You’ve got it all figured out with <a href="https://github.com/sitaramc/gitolite" title="gitolite">gitolite</a> or whatnot by using SSH public keys as an identity that determines privileges.</p>
 
 <p>Your only problem is this: ever so often you need to go over to that person’s computer, sit together on some merge, and push into those higher-privileged repositories. But you can’t: you’re working on his/her computer, if you push you’ll be using their SSH key, and you just don’t have permissions.</p>
@@ -80,3 +104,14 @@ git admin ...whatever other command that requires more privileges in gitolite or
 <p>That’s it!</p>
 
 <p><strong>Update:</strong> An alternative approach using SSH .config is <a href="http://stackoverflow.com/a/7927828/562906">given here</a> and basically boils down to adding multiple remotes to your git config using SSH host aliases. Each host alias uses a different SSH key, so to use different privileges one must push/pull to the different remotes. This approach is slightly simpler to set up (no scripts involved) but requires adding a new host alias to SSH for every host and also a new remote in every git repository you set up (may be nuisance if you have many repositories or, less likely, many remote hosts that you work with.)</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>

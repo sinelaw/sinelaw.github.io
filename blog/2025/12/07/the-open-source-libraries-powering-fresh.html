@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>the open source libraries powering fresh - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">December 7, 2025</p>
+<h1 id="the-open-source-libraries-powering-fresh">The Open-Source Libraries Powering Fresh</h1>
+<p>Building <a href="https://sinelaw.github.io/fresh/">Fresh</a> would have been insanely hard if it weren't for these libraries.</p>
+<p>Packages specifically useful for building a TUI text editor:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Crate</th>
+<th style="text-align: left;">One-Line Summary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/arboard">arboard</a></td>
+<td style="text-align: left;">Cross-platform acesss to the system clipboard (CTRL+C for the win)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/crossterm">crossterm</a></td>
+<td style="text-align: left;">Terminal manipulation, handling input, cursor movement, and colors across platforms (backend for ratatui)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/deno_ast">deno</a></td>
+<td style="text-align: left;">TypeScript/JavaScript embeddeble runtime, used for the plugin system (<code>deno_ast</code>, <code>deno_core</code>, etc.)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/dirs">dirs</a></td>
+<td style="text-align: left;">Abstracting away platform-specific user directories (like desktop, documents, cache)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/ignore">ignore</a></td>
+<td style="text-align: left;">Pattern matching for files, often using <code>.gitignore</code> syntax</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/lsp-types">lsp-types</a></td>
+<td style="text-align: left;">Data structures corresponding to the types defined by the Language Server Protocol (LSP)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/notify">notify</a></td>
+<td style="text-align: left;">Cross-platform filesystem event monitor/watcher for detecting file system changes (for detecting changes and auto-reverting buffers)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/pulldown-cmark">pulldown-cmark</a></td>
+<td style="text-align: left;">Markdown parser (some LSP servers return markdown)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/ratatui">ratatui</a></td>
+<td style="text-align: left;">Full-featured Text User Interfaces (TUI) library, very cool!</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/syntect">syntect</a></td>
+<td style="text-align: left;">Syntax highlighting based on Sublime Text syntax definitions</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/tree-sitter">tree-sitter</a></td>
+<td style="text-align: left;">Incrementally parsing concrete syntax trees for various languages (used in auto-indent &amp; semantic highlighting)</td>
+</tr>
+</tbody>
+</table>
+<p>General purpose libraries:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Crate</th>
+<th style="text-align: left;">One-Line Summary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/anyhow">anyhow</a></td>
+<td style="text-align: left;">Makes it easy to align all your errors to a single type</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/async-trait">async-trait</a></td>
+<td style="text-align: left;">Enables the use of <code>async</code> functions in Rust traits, which is currently unsupported natively</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/chrono">chrono</a></td>
+<td style="text-align: left;">Date and time manipulation and formatting</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/clap">clap</a></td>
+<td style="text-align: left;">command-line arguments parsing, auto-generated help messages, and more</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/libc">libc</a></td>
+<td style="text-align: left;">Low-level bindings to OS-level C standard library</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/libloading">libloading</a></td>
+<td style="text-align: left;">dlopen wrapper (used for libgpm dynamic loading)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/lru">lru</a></td>
+<td style="text-align: left;">Implements a simple, efficient Least Recently Used (LRU) cache based on a hash map and a linked list</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/nix">nix</a></td>
+<td style="text-align: left;">Bindings to Unix-like OS APIs (e.g., processes, file descriptors)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/regex">regex</a></td>
+<td style="text-align: left;">Regular expression engine</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/schemars">schemars</a></td>
+<td style="text-align: left;">Used for generating JSON Schema from Rust data structures for API validation and documentation (config.json autogenerated parser)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/serde">serde</a></td>
+<td style="text-align: left;">Serializing/deserializing data structures efficiently, including json (with sede_json)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/sha2">sha2</a></td>
+<td style="text-align: left;">SHA-256, SHA-512, etc.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/tokio">tokio</a></td>
+<td style="text-align: left;">Asynchronous runtime for concurrency (e.g. use it for async IO)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://crates.io/crates/tracing">tracing</a></td>
+<td style="text-align: left;">Tracing and structured logging (also using <code>tracing-subscriber</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Thanks to all these projects - and their maintainers :)</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>

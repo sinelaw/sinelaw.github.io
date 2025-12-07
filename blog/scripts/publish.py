@@ -59,6 +59,48 @@ def run_pandoc(markdown: str, pandoc_path: str = "pandoc") -> str:
     return result.stdout.decode()
 
 
+def wrap_in_template(content_html: str, title: str, date: datetime) -> str:
+    """Wrap HTML content in a full page template with header/footer."""
+    date_str = date.strftime("%B %-d, %Y")
+    return f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(title)} - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">{date_str}</p>
+{content_html}
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>
+'''
+
+
 def slugify(title: str) -> str:
     """Convert title to URL-friendly slug."""
     slug = title.lower()
@@ -178,9 +220,12 @@ def main() -> None:
     # Convert markdown to HTML
     content_html = run_pandoc(md_content)
 
+    # Wrap in full page template
+    full_html = wrap_in_template(content_html, title, date)
+
     # Write HTML file
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(content_html)
+    output_path.write_text(full_html)
     print(f"Created {output_path}")
 
     # Update index

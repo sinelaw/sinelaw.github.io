@@ -1,3 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>beware of var in for loops js programmers - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">June 15, 2015</p>
 <p>Time and time again, I see people using ‘var’ in the initialization part of a for loop. Example from <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for">MDN (Mozilla Developer Network)</a>:</p>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>for (var i = 0; i &lt; 9; i++) {
@@ -30,3 +54,14 @@
 <p>This is a classic example of <strong><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/var#var_hoisting">var hoisting</a></strong>, which should qualify as one of JavaScript’s <a href="http://archive.oreilly.com/pub/a/javascript/excerpts/javascript-good-parts/awful-parts.html">awful parts</a>.</p>
 
 <p><strong>Don’t do it!</strong> Move all your ‘var’ statements to the head of each function, please.</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>

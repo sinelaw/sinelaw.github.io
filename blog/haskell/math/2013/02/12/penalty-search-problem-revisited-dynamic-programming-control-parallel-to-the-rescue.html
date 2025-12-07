@@ -1,3 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>penalty search problem revisited dynamic programming control parallel to the rescue - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">February 12, 2013</p>
 <p>My <a href="http://noamlewis.wordpress.com/2013/02/04/finding-the-perfect-baking-time-for-that-souffle-or-optimal-search-with-test-penalty/">last post</a> was about searching with a test penalty. The problem boils down to minimizing a recursive difference equation. Since I didn’t (and still don’t) have a closed-form solution, I had to base any conclusions on brute-force tests that find the best tree. The run time was dreadfully slow so I could calculate the solution for no more than a 15-cell array. For small arrays and a small cost constant, the solution for linear cost is just a <a href="http://en.wikipedia.org/wiki/Binary_search">half-interval search tree</a>.</p>
 
 <p>After writing that post I realized several things and here are the new results.</p>
@@ -37,3 +61,14 @@
 <hr />
 
 <p>1. The algorithm is a bit smarter - there’s no need to test the last array index, so the number of tests is slightly reduced.</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>

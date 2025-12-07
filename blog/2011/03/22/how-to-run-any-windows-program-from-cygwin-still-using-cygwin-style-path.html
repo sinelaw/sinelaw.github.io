@@ -1,3 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>how to run any windows program from cygwin still using cygwin style path - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">March 22, 2011</p>
 <p>In my previous post I posted a script useful for running kdiff3 for windows correctly from within cygwin. Here’s a more general version that can be used for any windows program. Save the following as <strong>~/cygwinify.sh</strong> (or whatever you like):</p>
 
 <p><code class="language-plaintext highlighter-rouge">#!/usr/bin/bash RESULT="" for arg do if [[ "" != "$arg" ]] &amp;&amp; [[ -e $arg ]]; then OUT=`cygpath -wa $arg` else if [[ $arg == -* ]]; then OUT=$arg else OUT="'$arg'" fi fi RESULT=$RESULT$OUT" " done echo "$RESULT"</code></p>
@@ -11,3 +35,14 @@
 <p>Also, the script to run kdiff3 becomes (just replace the path to the executable with your own):</p>
 
 <p><code class="language-plaintext highlighter-rouge">#!/usr/bin/bash "/cygdrive/d/Program Files (x86)/KDiff3/kdiff3.exe" `~/cygwinify.sh "$@"`</code></p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+  </div>
+</footer>
+
+</body>
+</html>
