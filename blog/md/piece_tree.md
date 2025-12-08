@@ -283,10 +283,10 @@ Different editors use different text storage structures:
 
 - **Piece tree**: VS Code, Fresh
 - **[Rope](https://en.wikipedia.org/wiki/Rope_(data_structure))**: Helix ([Ropey](https://github.com/cessen/ropey)), Zed ([SumTree](https://zed.dev/blog/zed-decoded-rope-sumtree))
+- **Rope-like**: Vim ([memline](https://github.com/vim/vim/blob/master/src/memline.c)), [Neovim?](https://github.com/neovim/neovim/discussions/25647)
 - **[Gap buffer](https://en.wikipedia.org/wiki/Gap_buffer)**: Emacs
-- **Block-based line storage**: Vim/Neovim ([memline](https://github.com/neovim/neovim/discussions/25647))
 
-| Aspect | Piece Tree (Fresh, VS Code) | Rope (Helix, Zed) |
+| Aspect | Piece Tree (Fresh, VS Code, MS Word 1.1) | Rope (Helix, Zed, Neovim?) |
 |--------|----------------------------|-------------------|
 | Node contents | Pointer to buffer | Actual text (~1KB chunks) |
 | Insert | Append to buffer, add piece | May copy/split chunk |
