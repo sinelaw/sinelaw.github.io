@@ -265,7 +265,7 @@ The recovery format mirrors piece tree structure:
 - Each chunk stores: byte offset, original length replaced, new content
 - To recover: load original file from disk, apply chunks on top
 
-This works because piece tree edits are already expressed as "replace bytes X-Y with content Z" - exactly what recovery chunks store. For new/small files, a single chunk contains the full content.
+This approach dates back to Word 1.1's "Fast Save" feature (1990). From the [source code comments](https://computerhistory.org/blog/microsoft-word-for-windows-1-1a-source-code/): *"Quick save adds modification information to the end of the file rather than going through the laborious process of reconstructing and rewriting the file from scratch."* Word appended "File Extensions" containing new text and formatting, with the piece table (Clx) tracking where everything lives. Fresh uses the same principle - chunk-based modifications on top of an original - but writes to a separate recovery file instead of the document itself.
 
 On crash detection (lock file exists but process died), Fresh offers to recover by reconstructing: original file + stored chunks → recovered content.
 
