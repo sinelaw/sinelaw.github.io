@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -48,6 +50,83 @@ def extract_title_from_markdown(text: str) -> str | None:
         if line.startswith("# "):
             return line[2:].strip()
     return None
+
+
+def ensure_mmdc() -> str:
+    """Ensure mmdc (mermaid-cli) is available, install if needed. Returns path to mmdc."""
+    # Check if mmdc is already available
+    result = subprocess.run(["which", "mmdc"], capture_output=True, check=False)
+    if result.returncode == 0:
+        return "mmdc"
+
+    # Check if npx is available (preferred for auto-install)
+    result = subprocess.run(["which", "npx"], capture_output=True, check=False)
+    if result.returncode == 0:
+        print("mmdc not found, will use npx to run it...")
+        return "npx:mmdc"
+
+    # Try to install globally
+    print("mmdc not found, installing @mermaid-js/mermaid-cli...")
+    result = subprocess.run(
+        ["npm", "install", "-g", "@mermaid-js/mermaid-cli"],
+        capture_output=True,
+        check=False
+    )
+    if result.returncode != 0:
+        raise SystemExit(
+            f"Failed to install mermaid-cli: {result.stderr.decode()}\n"
+            "Install manually with: npm install -g @mermaid-js/mermaid-cli"
+        )
+    return "mmdc"
+
+
+# Mermaid config to fix text cutoff (use native SVG text instead of foreignObject)
+MERMAID_CONFIG = {
+    "htmlLabels": False,
+    "flowchart": {
+        "htmlLabels": False
+    }
+}
+
+
+def render_mermaid_diagrams(markdown: str, mmdc_path: str = "mmdc") -> str:
+    """Find mermaid code blocks and replace them with rendered SVGs."""
+    pattern = re.compile(r"```mermaid\n(.*?)```", re.DOTALL)
+
+    # Build command prefix based on mmdc_path
+    if mmdc_path == "npx:mmdc":
+        cmd_prefix = ["npx", "-y", "@mermaid-js/mermaid-cli"]
+    else:
+        cmd_prefix = [mmdc_path]
+
+    def replace_with_svg(match: re.Match[str]) -> str:
+        mermaid_code = match.group(1)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            input_path = Path(tmpdir) / "diagram.mmd"
+            output_path = Path(tmpdir) / "diagram.svg"
+            config_path = Path(tmpdir) / "config.json"
+
+            input_path.write_text(mermaid_code)
+            config_path.write_text(json.dumps(MERMAID_CONFIG))
+
+            cmd = cmd_prefix + [
+                "-i", str(input_path),
+                "-o", str(output_path),
+                "-c", str(config_path),
+                "-b", "transparent"
+            ]
+            result = subprocess.run(cmd, capture_output=True, check=False)
+            if result.returncode != 0:
+                print(f"Warning: mmdc failed: {result.stderr.decode()}", file=sys.stderr)
+                # Return original block if rendering fails
+                return match.group(0)
+
+            svg_content = output_path.read_text()
+            # Remove XML declaration if present
+            svg_content = re.sub(r"<\?xml[^>]*\?>\s*", "", svg_content)
+            return svg_content
+
+    return pattern.sub(replace_with_svg, markdown)
 
 
 def run_pandoc(markdown: str, pandoc_path: str = "pandoc") -> str:
@@ -110,28 +189,92 @@ def slugify(title: str) -> str:
     return slug.strip("-")
 
 
-def update_index(index_path: Path, post_url: str, title: str, date: datetime) -> None:
-    """Insert new post at top of the post list in index.html."""
+def scan_posts(blog_dir: Path) -> list[tuple[datetime, str, str]]:
+    """Scan blog directory for HTML posts, return list of (date, title, url)."""
+    posts = []
+    # Exclude non-post files
+    exclude = {"index.html", "404.html"}
+
+    for html_file in blog_dir.rglob("*.html"):
+        if html_file.name in exclude:
+            continue
+        if html_file.parent.name == "about":
+            continue
+
+        try:
+            content = html_file.read_text()
+
+            # Extract title from <title>...</title>
+            title_match = re.search(r"<title>(.+?)</title>", content)
+            if not title_match:
+                continue
+            title = title_match.group(1)
+            # Remove " - Noam Lewis" suffix if present
+            title = re.sub(r"\s*-\s*Noam Lewis$", "", title)
+
+            # Extract date from <p class="post-meta"...>DATE</p>
+            date_match = re.search(r'<p class="post-meta"[^>]*>([^<]+)</p>', content)
+            if not date_match:
+                continue
+            date_str = date_match.group(1).strip()
+
+            # Parse date (e.g., "December 7, 2025")
+            try:
+                post_date = datetime.strptime(date_str, "%B %d, %Y")
+            except ValueError:
+                # Try alternate format
+                try:
+                    post_date = datetime.strptime(date_str, "%b %d, %Y")
+                except ValueError:
+                    continue
+
+            # Compute URL relative to blog dir
+            rel_path = html_file.relative_to(blog_dir)
+            post_url = f"/blog/{rel_path}"
+
+            posts.append((post_date, title, post_url))
+        except Exception as e:
+            print(f"Warning: Could not parse {html_file}: {e}", file=sys.stderr)
+
+    # Sort by date descending
+    posts.sort(key=lambda x: x[0], reverse=True)
+    return posts
+
+
+def rebuild_index(index_path: Path, blog_dir: Path) -> None:
+    """Rebuild post list in index.html from actual HTML files."""
+    posts = scan_posts(blog_dir)
+
+    # Generate post list HTML
+    entries = []
+    for post_date, title, post_url in posts:
+        date_str = post_date.strftime("%b %-d, %Y")  # e.g., "Dec 7, 2025"
+        entry = f'''<li>
+          <span class="post-meta">{date_str}</span>
+          <h3>
+            <a class="post-link" href="{post_url}">
+              {html.escape(title)}
+            </a>
+          </h3>
+        </li>'''
+        entries.append(entry)
+
+    post_list_html = "\n        ".join(entries)
+
+    # Read index and replace post list
     content = index_path.read_text()
 
-    date_str = date.strftime("%b %-d, %Y")  # e.g., "Dec 7, 2025"
+    # Find and replace the entire post list
+    pattern = r'(<ul class="post-list">).*?(</ul>)'
+    replacement = rf'\1\n        {post_list_html}\n      \2'
+    new_content, count = re.subn(pattern, replacement, content, flags=re.DOTALL)
 
-    new_entry = f'''<li><span class="post-meta">{date_str}</span>
-        <h3>
-          <a class="post-link" href="{post_url}">
-            {html.escape(title)}
-          </a>
-        </h3></li>'''
-
-    # Find the post list and insert after opening tag
-    marker = '<ul class="post-list">'
-    if marker not in content:
-        print(f"Warning: Could not find '{marker}' in index.html", file=sys.stderr)
+    if count == 0:
+        print("Warning: Could not find post-list in index.html", file=sys.stderr)
         return
 
-    content = content.replace(marker, marker + new_entry, 1)
-    index_path.write_text(content)
-    print(f"Updated {index_path}")
+    index_path.write_text(new_content)
+    print(f"Rebuilt {index_path} with {len(posts)} posts")
 
 
 def update_feed(feed_path: Path, post_url: str, title: str, date: datetime,
@@ -217,6 +360,11 @@ def main() -> None:
         print("\n[Dry run - no files modified]")
         return
 
+    # Render mermaid diagrams to SVG (if any)
+    if "```mermaid" in md_content:
+        mmdc_path = ensure_mmdc()
+        md_content = render_mermaid_diagrams(md_content, mmdc_path)
+
     # Convert markdown to HTML
     content_html = run_pandoc(md_content)
 
@@ -228,10 +376,10 @@ def main() -> None:
     output_path.write_text(full_html)
     print(f"Created {output_path}")
 
-    # Update index
+    # Rebuild index from all posts
     index_path = blog_dir / "index.html"
     if index_path.exists():
-        update_index(index_path, post_url, title, date)
+        rebuild_index(index_path, blog_dir)
 
     # Update feed
     feed_path = blog_dir / "feed.xml"
