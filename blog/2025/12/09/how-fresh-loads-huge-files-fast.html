@@ -21,7 +21,7 @@
 
 <main class="wrapper">
   <article>
-    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">December 8, 2025</p>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">December 9, 2025</p>
 <h1 id="how-fresh-loads-huge-files-fast">How Fresh Loads Huge Files Fast</h1>
 <p>Fresh uses a <strong>piece tree</strong> (also called a piece table) for text storage. The piece table originated in the early 1970s - first in <a href="https://www.computerhistory.org/collections/catalog/102740449">J. Strother Moore and Bob Boyer's "77-Editor" at Edinburgh</a> (1971-1973), where they applied structure-sharing techniques from their theorem proving research to text editing. Moore later brought the idea to Xerox PARC, where Charles Simonyi adopted it for the <a href="https://en.wikipedia.org/wiki/Bravo_(editor)">Bravo editor</a> (1974). Simonyi later <a href="https://www.tiny.cloud/blog/wysiwyg-development-history/">brought it to Microsoft Word</a> (1983). The design minimizes memory copying by never modifying original file content - critical for early systems with limited RAM. <a href="https://code.visualstudio.com/blogs/2018/03/23/text-buffer-reimplementation">VS Code adopted piece tables in 2018</a>, replacing their previous line-array implementation.</p>
 <p><a href="https://sinelaw.github.io/fresh/">Fresh</a>'s implementation adds immutable nodes (for concurrency and cheap snapshots) and lazy loading (for large files). (<a href="https://github.com/sinelaw/fresh">GitHub</a>)</p>
@@ -179,11 +179,29 @@ let text = buffer.get_text_range(100, 200);</code></pre>
 </ul>
 
   </article>
+
+  <section class="comments">
+    <script src="https://utteranc.es/client.js"
+        repo="sinelaw/utterances"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+    </script>
+  </section>
 </main>
 
 <footer class="site-footer">
   <div class="wrapper">
     <a href="/blog/">← Back to all posts</a>
+    <div class="social-links">
+      <a href="https://x.com/TheNoamLewis" title="Twitter/X" aria-label="Twitter">
+        <img src="/blog/assets/icon-x.svg" alt="X/Twitter" width="24" height="24">
+      </a>
+      <a href="https://github.com/sinelaw" title="GitHub" aria-label="GitHub">
+        <img src="/blog/assets/icon-github.svg" alt="GitHub" width="24" height="24">
+      </a>
+    </div>
   </div>
 </footer>
 

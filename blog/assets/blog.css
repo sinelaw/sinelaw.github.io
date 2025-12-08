@@ -243,6 +243,44 @@ li {
   text-align: center;
 }
 
+.site-footer .wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.social-links {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.social-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  border-bottom: none;
+}
+
+.social-links a:hover {
+  opacity: 1;
+  border-bottom: none;
+}
+
+.social-links img {
+  width: 24px;
+  height: 24px;
+}
+
+/* --- COMMENTS SECTION --- */
+.comments {
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid var(--color-divider);
+}
+
 /* --- RESPONSIVE --- */
 @media (max-width: 600px) {
   h1 { font-size: 1.8rem; }

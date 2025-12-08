@@ -171,11 +171,37 @@
       font-size: 0.9rem;
       color: var(--color-text-light);
     }
-    
+
     .footer-heading {
         font-size: 1.2rem;
         font-weight: 700;
         color: var(--color-text-dark);
+        margin-bottom: 15px;
+    }
+
+    .social-links {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .social-links a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.6;
+      transition: opacity 0.2s ease;
+    }
+
+    .social-links a:hover {
+      opacity: 1;
+      text-decoration: none;
+    }
+
+    .social-links img {
+      width: 24px;
+      height: 24px;
     }
 
     /* --- 5. RESPONSIVENESS (for phone screens) --- */
@@ -228,6 +254,14 @@
     <div class="home">
       <h2 class="post-list-heading">Posts</h2>
       <ul class="post-list">
+        <li>
+          <span class="post-meta">Dec 9, 2025</span>
+          <h3>
+            <a class="post-link" href="/blog/2025/12/09/how-fresh-loads-huge-files-fast.html">
+              How Fresh Loads Huge Files Fast
+            </a>
+          </h3>
+        </li>
         <li>
           <span class="post-meta">Dec 8, 2025</span>
           <h3>
@@ -616,24 +650,13 @@
   <data class="u-url" href="/blog/"></data>
   <div class="wrapper">
     <h2 class="footer-heading">Noam Lewis - The Blog</h2>
-    <div class="footer-col-wrapper">
-      <div class="footer-col footer-col-1">
-        <ul class="contact-list">
-          <li class="p-name">Noam Lewis - The Blog</li>
-        </ul>
-      </div>
-      <div class="footer-col footer-col-2">
-        <ul class="social-media-list">
-          <li>
-            <a href="https://github.com/sinelaw">
-              <span class="username">sinelaw</span>
-            </a>
-          </li>
-        </ul>
-      </div>
-      <div class="footer-col footer-col-3">
-        <p></p>
-      </div>
+    <div class="social-links">
+      <a href="https://x.com/TheNoamLewis" title="Twitter/X" aria-label="Twitter">
+        <img src="/blog/assets/icon-x.svg" alt="X/Twitter" width="24" height="24">
+      </a>
+      <a href="https://github.com/sinelaw" title="GitHub" aria-label="GitHub">
+        <img src="/blog/assets/icon-github.svg" alt="GitHub" width="24" height="24">
+      </a>
     </div>
   </div>
 </footer>

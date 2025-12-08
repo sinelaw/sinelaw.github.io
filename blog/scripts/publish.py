@@ -167,11 +167,29 @@ def wrap_in_template(content_html: str, title: str, date: datetime) -> str:
     <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">{date_str}</p>
 {content_html}
   </article>
+
+  <section class="comments">
+    <script src="https://utteranc.es/client.js"
+        repo="sinelaw/utterances"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+    </script>
+  </section>
 </main>
 
 <footer class="site-footer">
   <div class="wrapper">
     <a href="/blog/">← Back to all posts</a>
+    <div class="social-links">
+      <a href="https://x.com/TheNoamLewis" title="Twitter/X" aria-label="Twitter">
+        <img src="/blog/assets/icon-x.svg" alt="X/Twitter" width="24" height="24">
+      </a>
+      <a href="https://github.com/sinelaw" title="GitHub" aria-label="GitHub">
+        <img src="/blog/assets/icon-github.svg" alt="GitHub" width="24" height="24">
+      </a>
+    </div>
   </div>
 </footer>
 
