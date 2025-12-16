@@ -23,9 +23,7 @@
   <article>
     <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">December 17, 2025</p>
 <h1 id="revisiting-infernus-type-system---a-safe-subset-of-javascript">Revisiting Infernu's Type System - a Safe Subset of JavaScript</h1>
-<p>Back in 2015 - already 10 years ago - I built <a href="https://github.com/sinelaw/infernu">Infernu</a>, an experimental project to create static type checking, with type inference, for JavaScript. I started working on it before TypeScript was announced. The project was born from my frustrations while working on frontend code. As soon as I stopped working on frontend I essentially abandonded this effort to focus on other things.</p>
-<p>I never documented the type system in a clear and concise way, so I decided to give it a shot.</p>
-<p>Infernu is unique in that a legal program is <strong>valid JavaScript</strong> without any transpilation needed. The type checker inferred types and checked them without any annotations or special syntax. I did plan to add type annotations via comments for readability and limiting polymorphism when desired, but I don't think I ever got to that.</p>
+<p>Infernu is a type checker for JavaScript. It is unique in that a legal program is <strong>valid JavaScript</strong> without any transpilation needed. The type checker inferred types and checked them without any annotations or special syntax. I did plan to add type annotations via comments for readability and limiting polymorphism when desired, but I don't think I ever got to that.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Infernu employs a polymorphic, structural type system based on HMF (Hindley-Milner with first-class polymorphism) [Leijen 2008], extended with row-polymorphism for structural typing, simple type classes, and equi-recursive types. The system is designed to statically type check a subset of JavaScript without requiring explicit type annotations.</p>
 <p>The key modifications from standard HMF include:</p>
@@ -208,6 +206,7 @@ r ::= l: σ, r | α | ∅               (row types)</code></pre>
 <h2 id="a-note-about-typescript">A note about TypeScript</h2>
 <p>TypeScript is commonly described as a <strong>superset of JavaScript</strong> in that any valid JavaScript code is theoretically also valid TypeScript. That's not exactly true because code that violates TypeScript's static typing rules triggers errors (depending on configuration), so there are many valid JavaScript programs which are not valid TypeScript programs. That being said TypeScript focuses on gradual typing and improved idioms and doesn't make as strong a statement about what parts of JavaScript are strictly excluded.</p>
 <h2 id="what-next">What Next?</h2>
+<p>Back in 2015 - already 10 years ago - I built <a href="https://github.com/sinelaw/infernu">Infernu</a>, an experimental project to create static type checking, with type inference, for JavaScript. I started working on it before TypeScript was announced. The project was born from my frustrations while working on frontend code. As soon as I stopped working on frontend I essentially abandonded this effort to focus on other things.</p>
 <p>At the time, TypeScript didn't exist yet, but today the situation is different - TypeScript has evolved a lot and is one of the most popular languages out there. Still, it's wildly different from what I had in mind for Infernu, which was a minimal, ML-style language and not the Java-style route taken by TypeScript. I think there's still room for something like this, maybe a re-implementation of this type system.</p>
 <h2 id="references">References</h2>
 <ul>

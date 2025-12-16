@@ -1,10 +1,6 @@
 # Revisiting Infernu's Type System - a Safe Subset of JavaScript
 
-Back in 2015 - already 10 years ago - I built [Infernu](https://github.com/sinelaw/infernu), an experimental project to create static type checking, with type inference, for JavaScript. I started working on it before TypeScript was announced. The project was born from my frustrations while working on frontend code. As soon as I stopped working on frontend I essentially abandonded this effort to focus on other things.
-
-I never documented the type system in a clear and concise way, so I decided to give it a shot.
-
-Infernu is unique in that a legal program is **valid JavaScript** without any transpilation needed. The type checker inferred types and checked them without any annotations or special syntax. I did plan to add type annotations via comments for readability and limiting polymorphism when desired, but I don't think I ever got to that.
+Infernu is a type checker for JavaScript. It is unique in that a legal program is **valid JavaScript** without any transpilation needed. The type checker inferred types and checked them without any annotations or special syntax. I did plan to add type annotations via comments for readability and limiting polymorphism when desired, but I don't think I ever got to that.
 
 ## Introduction
 
@@ -268,6 +264,8 @@ To ensure static type safety, Infernu excludes some of JavaScript's more dynamic
 TypeScript is commonly described as a **superset of JavaScript** in that any valid JavaScript code is theoretically also valid TypeScript. That's not exactly true because code that violates TypeScript's static typing rules triggers errors (depending on configuration), so there are many valid JavaScript programs which are not valid TypeScript programs. That being said TypeScript focuses on gradual typing and improved idioms and doesn't make as strong a statement about what parts of JavaScript are strictly excluded.
 
 ## What Next?
+
+Back in 2015 - already 10 years ago - I built [Infernu](https://github.com/sinelaw/infernu), an experimental project to create static type checking, with type inference, for JavaScript. I started working on it before TypeScript was announced. The project was born from my frustrations while working on frontend code. As soon as I stopped working on frontend I essentially abandonded this effort to focus on other things.
 
 At the time, TypeScript didn't exist yet, but today the situation is different - TypeScript has evolved a lot and is one of the most popular languages out there. Still, it's wildly different from what I had in mind for Infernu, which was a minimal, ML-style language and not the Java-style route taken by TypeScript. I think there's still room for something like this, maybe a re-implementation of this type system.
 
