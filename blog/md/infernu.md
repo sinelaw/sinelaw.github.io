@@ -4,6 +4,8 @@ Back in 2015 - already 10 years ago - I built [Infernu](https://github.com/sinel
 
 I never documented the type system in a clear and concise way, so I decided to give it a shot.
 
+Infernu is unique in that a legal program is **valid JavaScript** without any transpilation needed. The type checker inferred types and checked them without any annotations or special syntax. I did plan to add type annotations via comments for readability and limiting polymorphism when desired, but I don't think I ever got to that.
+
 ## Introduction
 
 Infernu employs a polymorphic, structural type system based on HMF (Hindley-Milner with first-class polymorphism) [Leijen 2008], extended with row-polymorphism for structural typing, simple type classes, and equi-recursive types. The system is designed to statically type check a subset of JavaScript without requiring explicit type annotations.

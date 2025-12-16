@@ -25,6 +25,7 @@
 <h1 id="revisiting-infernus-type-system---a-safe-subset-of-javascript">Revisiting Infernu's Type System - a Safe Subset of JavaScript</h1>
 <p>Back in 2015 - already 10 years ago - I built <a href="https://github.com/sinelaw/infernu">Infernu</a>, an experimental project to create static type checking, with type inference, for JavaScript. I started working on it before TypeScript was announced. The project was born from my frustrations while working on frontend code. As soon as I stopped working on frontend I essentially abandonded this effort to focus on other things.</p>
 <p>I never documented the type system in a clear and concise way, so I decided to give it a shot.</p>
+<p>Infernu is unique in that a legal program is <strong>valid JavaScript</strong> without any transpilation needed. The type checker inferred types and checked them without any annotations or special syntax. I did plan to add type annotations via comments for readability and limiting polymorphism when desired, but I don't think I ever got to that.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Infernu employs a polymorphic, structural type system based on HMF (Hindley-Milner with first-class polymorphism) [Leijen 2008], extended with row-polymorphism for structural typing, simple type classes, and equi-recursive types. The system is designed to statically type check a subset of JavaScript without requiring explicit type annotations.</p>
 <p>The key modifications from standard HMF include:</p>
