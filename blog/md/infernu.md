@@ -259,7 +259,7 @@ To ensure static type safety, Infernu excludes some of JavaScript's more dynamic
 
 ## Implementation
 
-Infernu[Infernu](https://github.com/sinelaw/infernu) implements type inference of the above system, based on HMF. I can't say the implementation is clean, sound, or even correct (especially not 10 years after the fact). It did work pretty well over a wide variety of test programs.
+[Infernu](https://github.com/sinelaw/infernu) implements type inference of the above system, based on HMF. I can't say the implementation is clean, sound, or even correct (especially not 10 years after the fact). It did work pretty well over a wide variety of test programs.
 
 ## A note about TypeScript
 

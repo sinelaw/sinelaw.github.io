@@ -21,7 +21,7 @@
 
 <main class="wrapper">
   <article>
-    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">December 16, 2025</p>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">December 17, 2025</p>
 <h1 id="revisiting-infernus-type-system---a-safe-subset-of-javascript">Revisiting Infernu's Type System - a Safe Subset of JavaScript</h1>
 <p>Back in 2015 - already 10 years ago - I built <a href="https://github.com/sinelaw/infernu">Infernu</a>, an experimental project to create static type checking, with type inference, for JavaScript. I started working on it before TypeScript was announced. The project was born from my frustrations while working on frontend code. As soon as I stopped working on frontend I essentially abandonded this effort to focus on other things.</p>
 <p>I never documented the type system in a clear and concise way, so I decided to give it a shot.</p>
@@ -203,7 +203,7 @@ r ::= l: σ, r | α | ∅               (row types)</code></pre>
 <li><strong><code>arguments</code> object</strong>: The <code>arguments</code> object is not supported. All function arguments must be explicitly declared.</li>
 </ul>
 <h2 id="implementation">Implementation</h2>
-<p>Infernu<a href="https://github.com/sinelaw/infernu">Infernu</a> implements type inference of the above system, based on HMF. I can't say the implementation is clean, sound, or even correct (especially not 10 years after the fact). It did work pretty well over a wide variety of test programs.</p>
+<p><a href="https://github.com/sinelaw/infernu">Infernu</a> implements type inference of the above system, based on HMF. I can't say the implementation is clean, sound, or even correct (especially not 10 years after the fact). It did work pretty well over a wide variety of test programs.</p>
 <h2 id="a-note-about-typescript">A note about TypeScript</h2>
 <p>TypeScript is commonly described as a <strong>superset of JavaScript</strong> in that any valid JavaScript code is theoretically also valid TypeScript. That's not exactly true because code that violates TypeScript's static typing rules triggers errors (depending on configuration), so there are many valid JavaScript programs which are not valid TypeScript programs. That being said TypeScript focuses on gradual typing and improved idioms and doesn't make as strong a statement about what parts of JavaScript are strictly excluded.</p>
 <h2 id="what-next">What Next?</h2>
