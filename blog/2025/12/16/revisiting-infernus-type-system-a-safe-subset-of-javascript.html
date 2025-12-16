@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Revisiting Infernu's Type System - a Safe Subset of JavaScript - Noam Lewis</title>
+  <link rel="stylesheet" href="/blog/assets/blog.css">
+  <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Noam Lewis - The Blog</a>
+    <nav class="site-nav">
+      <a class="page-link" href="/blog/about/">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrapper">
+  <article>
+    <p class="post-meta" style="color: var(--color-text-light); margin-bottom: 30px;">December 16, 2025</p>
+<h1 id="revisiting-infernus-type-system---a-safe-subset-of-javascript">Revisiting Infernu's Type System - a Safe Subset of JavaScript</h1>
+<p>Back in 2015 - already 10 years ago - I built <a href="https://github.com/sinelaw/infernu">Infernu</a>, an experimental project to create static type checking, with type inference, for JavaScript. I started working on it before TypeScript was announced. The project was born from my frustrations while working on frontend code. As soon as I stopped working on frontend I essentially abandonded this effort to focus on other things.</p>
+<p>I never documented the type system in a clear and concise way, so I decided to give it a shot.</p>
+<h2 id="introduction">Introduction</h2>
+<p>Infernu employs a polymorphic, structural type system based on HMF (Hindley-Milner with first-class polymorphism) [Leijen 2008], extended with row-polymorphism for structural typing, simple type classes, and equi-recursive types. The system is designed to statically type check a subset of JavaScript without requiring explicit type annotations.</p>
+<p>The key modifications from standard HMF include:</p>
+<ul>
+<li><strong><a href="https://en.wikipedia.org/wiki/Row_polymorphism">Row polymorphism</a></strong> for typing JavaScript objects structurally</li>
+<li><strong>Equi-recursive types</strong> for handling self-referential structures and <code>this</code></li>
+<li><strong>Type classes</strong> (<code>Plus</code>, <code>Indexable</code>) for overloaded operators</li>
+</ul>
+<h2 id="disclaimer">Disclaimer</h2>
+<p>This type system comes with NO WARRANTY. I'm not a computer scientist and am far from an expert in type theory. The definitions should be read as aspirationally correct but may contain mistakes.</p>
+<h2 id="types">Types</h2>
+<p>Following HMF conventions, we distinguish between different categories of types:</p>
+<pre><code>σ ::= ∀α. σ | ρ                     (type schemes / polymorphic types)
+ρ ::= τ | σ → σ | {r} | [σ] | Map σ (unquantified types)
+τ ::= α | c                         (monomorphic types)
+c ::= Number | String | Boolean | Regex | Undefined | Null | Date  (primitive types)
+r ::= l: σ, r | α | ∅               (row types)</code></pre>
+<ul>
+<li><strong>Primitive Types</strong>: <code>Number</code>, <code>String</code>, <code>Boolean</code>, <code>Regex</code>, <code>Undefined</code>, <code>Null</code>, <code>Date</code>.</li>
+<li><strong>Type Variables</strong>: <code>α, β, ...</code> represent unknown types to be determined by inference.</li>
+<li><strong>Function Types</strong>: <code>σ₁ → σ₂</code>, or <code>(σ₁, σ₂, ..., σₙ) → σ</code> for multi-argument functions.</li>
+<li><strong>Row Types</strong>: <code>{l₁: σ₁, l₂: σ₂, ..., lₙ: σₙ | ρ}</code> represent objects with properties <code>lᵢ</code> of type <code>σᵢ</code>. <code>ρ</code> is a row variable, making the row open for extension. A closed row has <code>∅</code> (empty) in place of <code>ρ</code>.</li>
+<li><strong>Type Constructors</strong>: <code>[σ]</code> for arrays, <code>Map σ</code> for string-keyed maps.</li>
+<li><strong>Qualified Types</strong>: <code>C α ⇒ σ</code> is a type <code>σ</code> constrained by predicate <code>C α</code>, where <code>C</code> is a type class.</li>
+<li><strong>Type Schemes</strong>: <code>∀α₁, ..., αₙ. σ</code> is a polymorphic type with universally quantified type variables.</li>
+</ul>
+<h2 id="typing-judgments">Typing Judgments</h2>
+<p>The core of the type system is the typing judgment <code>Γ ⊢ e : σ</code>, read as: "In type environment <code>Γ</code>, expression <code>e</code> has type <code>σ</code>". The environment <code>Γ</code> maps variable names to type schemes.</p>
+<p>We use standard notation:</p>
+<ul>
+<li><code>ftv(σ)</code> denotes free type variables in <code>σ</code></li>
+<li><code>σ₁ ⊑ σ₂</code> denotes that <code>σ₁</code> is a generic instance of <code>σ₂</code> (i.e., <code>σ₂</code> is more general)</li>
+<li><code>S</code> denotes a substitution mapping type variables to types</li>
+<li><code>Sσ</code> denotes application of substitution <code>S</code> to type <code>σ</code></li>
+</ul>
+<h3 id="literals">Literals</h3>
+<p><code>Γ ⊢ lit : τ</code> where <code>τ</code> is the type of the literal.</p>
+<ul>
+<li><code>Γ ⊢ n : Number</code> (for a number literal <code>n</code>)</li>
+<li><code>Γ ⊢ s : String</code> (for a string literal <code>s</code>)</li>
+<li>etc. for other literals.</li>
+</ul>
+<h3 id="variables">Variables</h3>
+<pre><code>       x : σ ∈ Γ
+[VAR] ─────────────
+       Γ ⊢ x : σ</code></pre>
+<p>Variables are looked up in the environment. Polymorphic types are instantiated via the [INST] rule when needed.</p>
+<h3 id="instantiation">Instantiation</h3>
+<pre><code>        Γ ⊢ e : σ₂    σ₁ ⊑ σ₂
+[INST] ────────────────────────
+        Γ ⊢ e : σ₁</code></pre>
+<p>A polymorphic type can be instantiated to a more specific type. The instance relation <code>σ₁ ⊑ σ₂</code> holds when <code>σ₁</code> can be obtained from <code>σ₂</code> by substituting type variables with types. For example a polymorphic function can ba instantiated to a function over specific types.</p>
+<h3 id="generalization">Generalization</h3>
+<pre><code>        Γ ⊢ e : σ    α ∉ ftv(Γ)
+[GEN]  ─────────────────────────
+        Γ ⊢ e : ∀α. σ</code></pre>
+<p>A type can be generalized over type variables that do not occur free in the environment.</p>
+<h3 id="abstraction-function-definition">Abstraction (Function Definition)</h3>
+<pre><code>        τ is a fresh type variable
+        Γ, x : τ ⊢ e : ρ
+[FUN]  ──────────────────────
+        Γ ⊢ λx.e : τ → ρ</code></pre>
+<p>A function parameter is assigned a fresh monomorphic type variable <code>τ</code>. The body must have an unquantified type <code>ρ</code> (quantifiers appear only at the outermost level after generalization). This restriction ensures principal types exist.</p>
+<p>For multi-argument functions <code>(x₁, ..., xₙ) =&gt; e</code>:</p>
+<pre><code>         τ₁, ..., τₙ are fresh type variables
+         Γ, x₁ : τ₁, ..., xₙ : τₙ ⊢ e : ρ
+[FUN-N] ─────────────────────────────────────────
+         Γ ⊢ (x₁, ..., xₙ) =&gt; e : (τ₁, ..., τₙ) → ρ</code></pre>
+<h3 id="application-function-call">Application (Function Call)</h3>
+<pre><code>        Γ ⊢ e₁ : σ₂ → σ    Γ ⊢ e₂ : σ₂
+[APP]  ─────────────────────────────────
+        Γ ⊢ e₁ e₂ : σ</code></pre>
+<p>The argument type must match the parameter type exactly (after instantiation via [INST]). Note that in HMF, argument and parameter types can be polymorphic, enabling first-class polymorphism.</p>
+<h3 id="let-expressions">Let Expressions</h3>
+<pre><code>        Γ ⊢ e₁ : σ₁    Γ, x : σ₁ ⊢ e₂ : σ₂
+[LET]  ─────────────────────────────────────
+        Γ ⊢ let x = e₁ in e₂ : σ₂</code></pre>
+<p>where <code>σ₁</code> is the <em>most general</em> type derivable for <code>e₁</code>, i.e., for any <code>Γ ⊢ e₁ : σ'₁</code> we have <code>σ₁ ⊑ σ'₁</code>.</p>
+<h3 id="object-literals-rows">Object Literals (Rows)</h3>
+<pre><code>         Γ ⊢ e₁ : σ₁    ...    Γ ⊢ eₙ : σₙ
+[OBJ]   ───────────────────────────────────────────────
+         Γ ⊢ {l₁: e₁, ..., lₙ: eₙ} : {l₁: σ₁, ..., lₙ: σₙ | ∅}</code></pre>
+<p>Object literals produce closed row types (with <code>∅</code> as the row tail). Row unification allows a closed row <code>{l: σ | ∅}</code> to unify with an open row <code>{l: σ | ρ}</code> by unifying <code>ρ</code> with <code>∅</code>, enabling structural subtyping via row polymorphism.</p>
+<h3 id="property-access">Property Access</h3>
+<pre><code>          Γ ⊢ e : {l: σ | ρ}
+[PROJ]   ─────────────────────
+          Γ ⊢ e.l : σ</code></pre>
+<p>Property access requires the object to have a row type containing label <code>l</code>. The row variable <code>ρ</code> may contain additional fields, enabling access on objects with more properties than strictly required.</p>
+<h3 id="property-assignment">Property Assignment</h3>
+<pre><code>           Γ ⊢ eobj : {l: σ | ρ}    Γ ⊢ eval : σ    σ ∈ τ
+[ASSIGN]  ──────────────────────────────────────────────────
+           Γ ⊢ eobj.l = eval : σ</code></pre>
+<p>Property assignment requires the assigned value's type to match the property's type. The constraint <code>σ ∈ τ</code> (the <em>value restriction</em>) requires the type to be monomorphic—this prevents unsound interactions between mutation and polymorphism, analogous to ML's value restriction for references.</p>
+<h2 id="recursive-types">Recursive Types</h2>
+<p>Infernu supports equi-recursive types, where two types are considered equivalent if their infinite unfoldings are identical. In an equi-recursive system, the types <code>μα. σ</code> and <code>σ[α := μα. σ]</code> are considered equal—no explicit fold/unfold operations are needed.</p>
+<p>Recursive types arise during unification. When unifying a type variable <code>α</code> with a type <code>σ</code> that contains <code>α</code>, instead of failing the occurs check, the system creates an equi-recursive type:</p>
+<pre><code>         unify(α, σ) where α ∈ ftv(σ)
+[EQREC] ──────────────────────────────
+         α := μα. σ</code></pre>
+<p>For recursive let bindings (where the bound variable may appear in its own definition):</p>
+<pre><code>           α is fresh    Γ, x : α ⊢ e : σ    S = unify(α, σ)
+[LET-REC] ─────────────────────────────────────────────────────
+           Γ ⊢ let rec x = e : generalize(Γ, Sα)</code></pre>
+<p>If <code>α</code> occurs in <code>σ</code>, unification produces a cyclic substitution and <code>Sα</code> is an equi-recursive type.</p>
+<p><strong>Example:</strong> For <code>let x = { a: x }</code>:</p>
+<ol type="1">
+<li>Assign fresh <code>α</code> to <code>x</code></li>
+<li>Type the body: <code>{ a: x } : {a: α | ∅}</code></li>
+<li>Unify <code>α</code> with <code>{a: α | ∅}</code>, yielding <code>α := μα. {a: α | ∅}</code></li>
+<li>Result type: <code>μα. {a: α | ∅}</code></li>
+</ol>
+<p>Recursive types are essential for correctly typing many common JavaScript patterns, such as self-referential objects and methods that use <code>this</code>. When an object has a method that refers to <code>this</code>, the object's type is inherently recursive—the recursive type captures this self-referential nature.</p>
+<h2 id="type-classes">Type Classes</h2>
+<p>Type classes constrain polymorphic types, similar to Haskell's type classes. A qualified type <code>C α ⇒ σ</code> indicates that <code>σ</code> is valid only when <code>α</code> satisfies constraint <code>C</code>.</p>
+<p><strong><code>Plus α</code></strong>: Types supporting the <code>+</code> operator.</p>
+<ul>
+<li>Instances: <code>Plus Number</code>, <code>Plus String</code></li>
+</ul>
+<p><strong><code>Indexable c i e</code></strong>: Container types with indexing.</p>
+<ul>
+<li><code>c</code>: container type, <code>i</code>: index type, <code>e</code>: element type</li>
+<li>Instances:
+<ul>
+<li><code>Indexable [α] Number α</code> (arrays indexed by number)</li>
+<li><code>Indexable (Map α) String α</code> (maps indexed by string)</li>
+<li><code>Indexable String Number String</code> (strings indexed by number)</li>
+</ul></li>
+</ul>
+<p>For example, the <code>+</code> operator has type:</p>
+<pre><code>Plus α ⇒ (α, α) → α</code></pre>
+<p>This means <code>+</code> takes two arguments of the same type <code>α</code> and returns <code>α</code>, where <code>α</code> must satisfy <code>Plus</code> (i.e., be <code>Number</code> or <code>String</code>).</p>
+<h2 id="javascript-idioms-and-exclusions">JavaScript Idioms and Exclusions</h2>
+<p>Infernu's type system is designed to support many common JavaScript idioms while ensuring type safety.</p>
+<h3 id="supported-idioms">Supported Idioms</h3>
+<ul>
+<li><p><strong>Object-Oriented Programming</strong>:</p>
+<ul>
+<li><p><strong><code>this</code> keyword</strong>: The type of <code>this</code> is inferred and correctly handled, even with its dynamic scoping rules.</p></li>
+<li><p><strong><code>new</code> keyword</strong>: Constructor functions are supported. The type of a <code>new</code> expression is the type of <code>this</code> within the constructor.</p></li>
+<li><p><strong>Methods</strong>: Methods are properties of row types that have function types. Polymorphic methods are supported via rank-2 types for rows.</p></li>
+<li><p><strong>Methods with <code>this</code> and Recursive Types</strong>: Infernu accurately models methods that operate on their own object (<code>this</code>) using recursive types. Consider the following JavaScript example:</p>
+<pre class="javascript"><code>let counter = {
+  count: 0,
+  inc: function() {
+    this.count = this.count + 1;
+  }
+};</code></pre>
+<p>The inferred type for <code>counter</code> is:</p>
+<pre><code>μα. {count: Number, inc: α → Undefined | ∅}</code></pre>
+<p>Breaking this down:</p>
+<ul>
+<li><code>count</code> has type <code>Number</code> (from initialization to <code>0</code>)</li>
+<li><code>inc</code> has type <code>α → Undefined</code>, where <code>α</code> is the type of <code>this</code> (the object itself)</li>
+<li>Since <code>inc</code>'s parameter type refers to the enclosing object type, we get a recursive type <code>μα</code></li>
+</ul>
+<p>This recursive type correctly captures that <code>this</code> within <code>inc</code> has the same type as the <code>counter</code> object itself.</p></li>
+<li><p><strong>Prototypal Inheritance</strong>: While not directly modeled, inheritance can be simulated through object composition and row polymorphism.</p></li>
+</ul></li>
+<li><p><strong>Functional Programming</strong>:</p>
+<ul>
+<li><strong>Higher-Order Functions</strong>: Functions as first-class citizens are naturally supported.</li>
+<li><strong>Closures</strong>: The type system correctly infers the types of variables in closures.</li>
+</ul></li>
+<li><p><strong>Structural Typing</strong>:</p>
+<ul>
+<li>Row polymorphism allows for "duck typing" in a statically typed way. A function that expects an object with a certain property can be called with any object that has that property, regardless of its other properties.</li>
+</ul></li>
+</ul>
+<h3 id="excluded-code">Excluded Code</h3>
+<p>To ensure static type safety, Infernu excludes some of JavaScript's more dynamic and unsafe features:</p>
+<ul>
+<li><strong>Implicit Type Coercion</strong>: Expressions like <code>3 + 'a'</code> are disallowed. The <code>Plus</code> type class requires both operands to be of the same type (either <code>Number</code> or <code>String</code>).</li>
+<li><strong><code>eval()</code></strong>: Dynamic code evaluation is not supported.</li>
+<li><strong>Arbitrary Monkey-Patching</strong>: While adding properties to objects is possible with open row types, modifying the type of an existing property is restricted.</li>
+<li><strong>Heterogeneous Arrays</strong>: Arrays in Infernu must be homogeneous, meaning all elements must have the same type. JavaScript's ability to mix types in an array, like <code>[1, "hello", true]</code>, is not permitted.</li>
+<li><strong><code>arguments</code> object</strong>: The <code>arguments</code> object is not supported. All function arguments must be explicitly declared.</li>
+</ul>
+<h2 id="implementation">Implementation</h2>
+<p>Infernu<a href="https://github.com/sinelaw/infernu">Infernu</a> implements type inference of the above system, based on HMF. I can't say the implementation is clean, sound, or even correct (especially not 10 years after the fact). It did work pretty well over a wide variety of test programs.</p>
+<h2 id="a-note-about-typescript">A note about TypeScript</h2>
+<p>TypeScript is commonly described as a <strong>superset of JavaScript</strong> in that any valid JavaScript code is theoretically also valid TypeScript. That's not exactly true because code that violates TypeScript's static typing rules triggers errors (depending on configuration), so there are many valid JavaScript programs which are not valid TypeScript programs. That being said TypeScript focuses on gradual typing and improved idioms and doesn't make as strong a statement about what parts of JavaScript are strictly excluded.</p>
+<h2 id="what-next">What Next?</h2>
+<p>At the time, TypeScript didn't exist yet, but today the situation is different - TypeScript has evolved a lot and is one of the most popular languages out there. Still, it's wildly different from what I had in mind for Infernu, which was a minimal, ML-style language and not the Java-style route taken by TypeScript. I think there's still room for something like this, maybe a re-implementation of this type system.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Luis Damas and Robin Milner. <em>Principal type-schemes for functional programs</em>. POPL 1982. The classic Hindley-Milner type inference.</li>
+<li>Mitchell Wand. <a href="https://www.sciencedirect.com/science/article/pii/089054019190050C"><em>Type Inference for Record Concatenation and Multiple Inheritance</em></a>. Information and Computation, 1991. Row polymorphism for structural typing.</li>
+<li>Jacques Guarrigue and Didier Rémy. <a href="https://caml.inria.fr/pub/papers/garrigue_remy-poly-ic99.pdf"><em>Semi-Explicit First-Class Polymorphism for ML</em></a>, Information and Computation 155, 13400169 (1999)</li>
+<li>Daan Leijen. <a href="https://dl.acm.org/doi/10.1145/1411204.1411245"><em>HMF: Simple Type Inference for First-Class Polymorphism</em></a>. ICFP 2008. The basis for Infernu's type system.</li>
+</ul>
+
+  </article>
+
+  <section class="comments">
+    <script src="https://utteranc.es/client.js"
+        repo="sinelaw/utterances"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+    </script>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrapper">
+    <a href="/blog/">← Back to all posts</a>
+    <div class="social-links">
+      <a href="https://x.com/TheNoamLewis" title="Twitter/X" aria-label="Twitter">
+        <img src="/blog/assets/icon-x.svg" alt="X/Twitter" width="24" height="24">
+      </a>
+      <a href="https://github.com/sinelaw" title="GitHub" aria-label="GitHub">
+        <img src="/blog/assets/icon-github.svg" alt="GitHub" width="24" height="24">
+      </a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

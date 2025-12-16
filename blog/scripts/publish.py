@@ -147,7 +147,7 @@ def wrap_in_template(content_html: str, title: str, date: datetime) -> str:
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(title)} - Noam Lewis</title>
+  <title>{html.escape(title, quote=False)} - Noam Lewis</title>
   <link rel="stylesheet" href="/blog/assets/blog.css">
   <link rel="alternate" type="application/atom+xml" title="Noam Lewis - The Blog" href="/blog/feed.xml">
 </head>
@@ -271,7 +271,7 @@ def rebuild_index(index_path: Path, blog_dir: Path) -> None:
           <span class="post-meta">{date_str}</span>
           <h3>
             <a class="post-link" href="{post_url}">
-              {html.escape(title)}
+              {html.escape(title, quote=False)}
             </a>
           </h3>
         </li>'''

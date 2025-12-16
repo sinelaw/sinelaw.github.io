@@ -6,27 +6,46 @@ I never documented the type system in a clear and concise way, so I decided to g
 
 ## Introduction
 
-Infernu employs a polymorphic, structural type system based on Hindley-Milner type inference. It features full type inference, parametric polymorphism, row-polymorphism for structural typing, and simple type classes. The system is designed to statically type check a subset of JavaScript without requiring explicit type annotations.
+Infernu employs a polymorphic, structural type system based on HMF (Hindley-Milner with first-class polymorphism) [Leijen 2008], extended with row-polymorphism for structural typing, simple type classes, and equi-recursive types. The system is designed to statically type check a subset of JavaScript without requiring explicit type annotations.
+
+The key modifications from standard HMF include:
+- **[Row polymorphism](https://en.wikipedia.org/wiki/Row_polymorphism)** for typing JavaScript objects structurally
+- **Equi-recursive types** for handling self-referential structures and `this`
+- **Type classes** (`Plus`, `Indexable`) for overloaded operators
+
+## Disclaimer
+
+This type system comes with NO WARRANTY. I'm not a computer scientist and am far from an expert in type theory. The definitions should be read as aspirationally correct but may contain mistakes.
 
 ## Types
 
-The following are the main types in the system:
+Following HMF conventions, we distinguish between different categories of types:
+
+```
+σ ::= ∀α. σ | ρ                     (type schemes / polymorphic types)
+ρ ::= τ | σ → σ | {r} | [σ] | Map σ (unquantified types)
+τ ::= α | c                         (monomorphic types)
+c ::= Number | String | Boolean | Regex | Undefined | Null | Date  (primitive types)
+r ::= l: σ, r | α | ∅               (row types)
+```
 
 - **Primitive Types**: `Number`, `String`, `Boolean`, `Regex`, `Undefined`, `Null`, `Date`.
-- **Type Variables**: `a, b, ...` which can be flexible (un-instantiated) or skolem (rigid).
-- **Function Types**: `(T1, T2, ...) -> T_result`, where `T1`, `T2`, etc. are argument types and `T_result` is the return type.
-- **Row Types**: `{l1: T1, l2: T2, ..., l_n: T_n | r}` represent objects with properties `l_i` of type `T_i`. `r` is a row variable, making the row open for extension. A closed row has no row variable.
-- **Type Constructors**: `[T]` for an array of type `T`, and `Map T` for a map from strings to values of type `T`.
-- **Qualified Types**: `C a => T` is a type `T` constrained by a predicate `C a`, where `C` is a type class and `a` is a type variable.
-- **Type Schemes**: `forall a_1, ..., a_n. T` is a polymorphic type, where `T` is a qualified type with universally quantified type variables `a_i`.
+- **Type Variables**: `α, β, ...` represent unknown types to be determined by inference.
+- **Function Types**: `σ₁ → σ₂`, or `(σ₁, σ₂, ..., σₙ) → σ` for multi-argument functions.
+- **Row Types**: `{l₁: σ₁, l₂: σ₂, ..., lₙ: σₙ | ρ}` represent objects with properties `lᵢ` of type `σᵢ`. `ρ` is a row variable, making the row open for extension. A closed row has `∅` (empty) in place of `ρ`.
+- **Type Constructors**: `[σ]` for arrays, `Map σ` for string-keyed maps.
+- **Qualified Types**: `C α ⇒ σ` is a type `σ` constrained by predicate `C α`, where `C` is a type class.
+- **Type Schemes**: `∀α₁, ..., αₙ. σ` is a polymorphic type with universally quantified type variables.
 
 ## Typing Judgments
 
-The core of the type system is the typing judgment, which has the form:
+The core of the type system is the typing judgment `Γ ⊢ e : σ`, read as: "In type environment `Γ`, expression `e` has type `σ`". The environment `Γ` maps variable names to type schemes.
 
-`Γ ⊢ e : τ`
-
-This is read as: "In the type environment `Γ`, the expression `e` has the type `τ`". `Γ` is a mapping from variable names to type schemes.
+We use standard notation:
+- `ftv(σ)` denotes free type variables in `σ`
+- `σ₁ ⊑ σ₂` denotes that `σ₁` is a generic instance of `σ₂` (i.e., `σ₂` is more general)
+- `S` denotes a substitution mapping type variables to types
+- `Sσ` denotes application of substitution `S` to type `σ`
 
 ### Literals
 
@@ -38,111 +57,155 @@ This is read as: "In the type environment `Γ`, the expression `e` has the type 
 
 ### Variables
 
-`Γ(x) = forall a_1, ..., a_n. τ`
-`b_1, ..., b_n` are fresh type variables
-`τ' = τ[a_1 := b_1, ..., a_n := b_n]`
------------------------------------------
-`Γ ⊢ x : τ'`
+```
+       x : σ ∈ Γ
+[VAR] ─────────────
+       Γ ⊢ x : σ
+```
 
-If a variable `x` is in the environment with a polymorphic type, it is instantiated with fresh type variables.
+Variables are looked up in the environment. Polymorphic types are instantiated via the [INST] rule when needed.
+
+### Instantiation
+
+```
+        Γ ⊢ e : σ₂    σ₁ ⊑ σ₂
+[INST] ────────────────────────
+        Γ ⊢ e : σ₁
+```
+
+A polymorphic type can be instantiated to a more specific type. The instance relation `σ₁ ⊑ σ₂` holds when `σ₁` can be obtained from `σ₂` by substituting type variables with types. For example a polymorphic function can ba instantiated to a function over specific types.
+
+### Generalization
+
+```
+        Γ ⊢ e : σ    α ∉ ftv(Γ)
+[GEN]  ─────────────────────────
+        Γ ⊢ e : ∀α. σ
+```
+
+A type can be generalized over type variables that do not occur free in the environment.
 
 ### Abstraction (Function Definition)
 
-`Γ, x_1:τ_1, ..., x_n:τ_n ⊢ e : τ`
------------------------------------------------
-`Γ ⊢ (x_1, ..., x_n) => e : (τ_1, ..., τ_n) -> τ`
+```
+        τ is a fresh type variable
+        Γ, x : τ ⊢ e : ρ
+[FUN]  ──────────────────────
+        Γ ⊢ λx.e : τ → ρ
+```
 
-A function is typed by adding its arguments with fresh type variables to the environment and inferring the type of its body.
+A function parameter is assigned a fresh monomorphic type variable `τ`. The body must have an unquantified type `ρ` (quantifiers appear only at the outermost level after generalization). This restriction ensures principal types exist.
+
+For multi-argument functions `(x₁, ..., xₙ) => e`:
+
+```
+         τ₁, ..., τₙ are fresh type variables
+         Γ, x₁ : τ₁, ..., xₙ : τₙ ⊢ e : ρ
+[FUN-N] ─────────────────────────────────────────
+         Γ ⊢ (x₁, ..., xₙ) => e : (τ₁, ..., τₙ) → ρ
+```
 
 ### Application (Function Call)
 
-`Γ ⊢ e_f : (τ_1, ..., τ_n) -> τ_r`
-`Γ ⊢ e_1 : τ'_1`
-...
-`Γ ⊢ e_n : τ'_n`
-`unify(τ_1, τ'_1)`
-...
-`unify(τ_n, τ'_n)`
-------------------------------------------------
-`Γ ⊢ e_f(e_1, ..., e_n) : τ_r`
+```
+        Γ ⊢ e₁ : σ₂ → σ    Γ ⊢ e₂ : σ₂
+[APP]  ─────────────────────────────────
+        Γ ⊢ e₁ e₂ : σ
+```
 
-The type of a function application is the return type of the function, after unifying the function's argument types with the types of the supplied arguments.
+The argument type must match the parameter type exactly (after instantiation via [INST]). Note that in HMF, argument and parameter types can be polymorphic, enabling first-class polymorphism.
 
 ### Let Expressions
 
-`Γ ⊢ e1 : τ1`
-`Γ' = generalize(Γ, τ1)`
-`Γ, x:Γ' ⊢ e2 : τ2`
-------------------------
-`Γ ⊢ let x = e1 in e2 : τ2`
+```
+        Γ ⊢ e₁ : σ₁    Γ, x : σ₁ ⊢ e₂ : σ₂
+[LET]  ─────────────────────────────────────
+        Γ ⊢ let x = e₁ in e₂ : σ₂
+```
 
-A `let` expression is typed by inferring the type of the bound expression, generalizing it to a type scheme, adding it to the environment, and then inferring the type of the body.
+where `σ₁` is the *most general* type derivable for `e₁`, i.e., for any `Γ ⊢ e₁ : σ'₁` we have `σ₁ ⊑ σ'₁`.
 
 ### Object Literals (Rows)
 
-`Γ ⊢ e_1 : τ_1`
-...
-`Γ ⊢ e_n : τ_n`
--------------------------------------------------
-`Γ ⊢ {l_1: e_1, ..., l_n: e_n} : {l_1:τ_1, ..., l_n:τ_n}`
+```
+         Γ ⊢ e₁ : σ₁    ...    Γ ⊢ eₙ : σₙ
+[OBJ]   ───────────────────────────────────────────────
+         Γ ⊢ {l₁: e₁, ..., lₙ: eₙ} : {l₁: σ₁, ..., lₙ: σₙ | ∅}
+```
 
-The type of an object literal is a closed row type with the types of its properties.
+Object literals produce closed row types (with `∅` as the row tail). Row unification allows a closed row `{l: σ | ∅}` to unify with an open row `{l: σ | ρ}` by unifying `ρ` with `∅`, enabling structural subtyping via row polymorphism.
 
 ### Property Access
 
-`Γ ⊢ e : {..., l:τ, ... | r}`
---------------------------
-`Γ ⊢ e.l : τ`
+```
+          Γ ⊢ e : {l: σ | ρ}
+[PROJ]   ─────────────────────
+          Γ ⊢ e.l : σ
+```
 
-The type of a property access is the type of the property in the row type of the object.
+Property access requires the object to have a row type containing label `l`. The row variable `ρ` may contain additional fields, enabling access on objects with more properties than strictly required.
 
 ### Property Assignment
 
-`Γ ⊢ e_obj : {..., l:τ, ... | r}`
-`Γ ⊢ e_val : τ'`
-`unify(τ, τ')`
-`value_restriction(τ')`
---------------------------------
-`Γ ⊢ e_obj.l = e_val : τ'`
+```
+           Γ ⊢ eobj : {l: σ | ρ}    Γ ⊢ eval : σ    σ ∈ τ
+[ASSIGN]  ──────────────────────────────────────────────────
+           Γ ⊢ eobj.l = eval : σ
+```
 
-Property assignment unifies the type of the property with the type of the value. The value's type is restricted to be monomorphic (the "value restriction").
+Property assignment requires the assigned value's type to match the property's type. The constraint `σ ∈ τ` (the *value restriction*) requires the type to be monomorphic—this prevents unsound interactions between mutation and polymorphism, analogous to ML's value restriction for references.
 
 ## Recursive Types
 
-Infernu supports equi-recursive types, where two types are considered equivalent if their infinite unfoldings are identical. Recursive types are not created explicitly, but are inferred by the type system when a type variable is unified with a type that contains it.
+Infernu supports equi-recursive types, where two types are considered equivalent if their infinite unfoldings are identical. In an equi-recursive system, the types `μα. σ` and `σ[α := μα. σ]` are considered equal—no explicit fold/unfold operations are needed.
 
-For example, in the expression `let x = { a: x }`, the type of `x` is inferred to be a recursive type `μa. { a: a }`. This is represented internally by creating a named type and substituting the recursive occurrence of the type variable with the named type.
+Recursive types arise during unification. When unifying a type variable `α` with a type `σ` that contains `α`, instead of failing the occurs check, the system creates an equi-recursive type:
 
-The judgment for this is:
+```
+         unify(α, σ) where α ∈ ftv(σ)
+[EQREC] ──────────────────────────────
+         α := μα. σ
+```
 
-`Γ, x:α ⊢ e : τ`
-`unify(α, τ)` results in an occurs check failure for `α` in `τ`
------------------------------------------------------------------
-`Γ ⊢ let x = e in ... : μa.τ[x:=a]`
+For recursive let bindings (where the bound variable may appear in its own definition):
 
-Recursive types are essential for correctly typing many common JavaScript patterns, such as self-referential objects and certain functional programming idioms. They are also crucial for modeling object-oriented methods that use `this`. When an object has a method that refers to the object itself (e.g., `this.method()`), the object's type is inherently recursive. The recursive type captures this self-referential nature, allowing `this` to be correctly typed within the method's context as referring to an instance of the encompassing recursive type.
+```
+           α is fresh    Γ, x : α ⊢ e : σ    S = unify(α, σ)
+[LET-REC] ─────────────────────────────────────────────────────
+           Γ ⊢ let rec x = e : generalize(Γ, Sα)
+```
+
+If `α` occurs in `σ`, unification produces a cyclic substitution and `Sα` is an equi-recursive type.
+
+**Example:** For `let x = { a: x }`:
+1. Assign fresh `α` to `x`
+2. Type the body: `{ a: x } : {a: α | ∅}`
+3. Unify `α` with `{a: α | ∅}`, yielding `α := μα. {a: α | ∅}`
+4. Result type: `μα. {a: α | ∅}`
+
+Recursive types are essential for correctly typing many common JavaScript patterns, such as self-referential objects and methods that use `this`. When an object has a method that refers to `this`, the object's type is inherently recursive—the recursive type captures this self-referential nature.
 
 ## Type Classes
 
-Type classes constrain polymorphic types.
+Type classes constrain polymorphic types, similar to Haskell's type classes. A qualified type `C α ⇒ σ` indicates that `σ` is valid only when `α` satisfies constraint `C`.
 
-- **`Plus a`**: For types that support the `+` operator.
-  - Instances: `Number`, `String`.
+**`Plus α`**: Types supporting the `+` operator.
+- Instances: `Plus Number`, `Plus String`
 
-- **`Indexable c i e`**: For container types.
-  - `c`: container type
-  - `i`: index type
-  - `e`: element type
-  - Instances:
-    - `Indexable [a] Number a` (Arrays)
-    - `Indexable (Map a) String a` (String Maps)
-    - `Indexable String Number String` (Strings)
+**`Indexable c i e`**: Container types with indexing.
+- `c`: container type, `i`: index type, `e`: element type
+- Instances:
+  - `Indexable [α] Number α` (arrays indexed by number)
+  - `Indexable (Map α) String α` (maps indexed by string)
+  - `Indexable String Number String` (strings indexed by number)
 
-A judgment with a type class constraint is written as:
+For example, the `+` operator has type:
 
-`Plus a => Γ ⊢ e : (a, a) -> a`
+```
+Plus α ⇒ (α, α) → α
+```
 
-This means that `e` is a function that takes two arguments of the same type `a` and returns a value of type `a`, where `a` must be an instance of the `Plus` type class.
+This means `+` takes two arguments of the same type `α` and returns `α`, where `α` must satisfy `Plus` (i.e., be `Number` or `String`).
 
 ## JavaScript Idioms and Exclusions
 
@@ -165,11 +228,16 @@ Infernu's type system is designed to support many common JavaScript idioms while
       }
     };
     ```
-    For the `counter` object:
-    *   **`count` Field Type**: `Number` due to the explicit initialization to `0`.
-    *   **`inc` Method Type (within the object context)**: `(self) -> Undefined`, assuming `self` will be the full object type, which we haven't yet defined. The method implicitly receives `self` as its `this` argument.
-    *   **`counter` Object Type**: Has type `self` as we declared above, which equals a row with the field and method: `{ count: Number, inc: (self) -> Undefined }`. Since that expanded type refers to `self`, we have a **recursive type**: `μself. { count: Number, inc: (self) -> Undefined }`.
-    This example demonstrates how Infernu uses recursive types to accurately model methods that operate on their own object (`this`), ensuring that the type of `this` is correctly understood as the type of the object itself.
+    The inferred type for `counter` is:
+    ```
+    μα. {count: Number, inc: α → Undefined | ∅}
+    ```
+    Breaking this down:
+    - `count` has type `Number` (from initialization to `0`)
+    - `inc` has type `α → Undefined`, where `α` is the type of `this` (the object itself)
+    - Since `inc`'s parameter type refers to the enclosing object type, we get a recursive type `μα`
+
+    This recursive type correctly captures that `this` within `inc` has the same type as the `counter` object itself.
   - **Prototypal Inheritance**: While not directly modeled, inheritance can be simulated through object composition and row polymorphism.
 
 - **Functional Programming**:
@@ -189,8 +257,21 @@ To ensure static type safety, Infernu excludes some of JavaScript's more dynamic
 - **Heterogeneous Arrays**: Arrays in Infernu must be homogeneous, meaning all elements must have the same type. JavaScript's ability to mix types in an array, like `[1, "hello", true]`, is not permitted.
 - **`arguments` object**: The `arguments` object is not supported. All function arguments must be explicitly declared.
 
+## Implementation
+
+Infernu[Infernu](https://github.com/sinelaw/infernu) implements type inference of the above system, based on HMF. I can't say the implementation is clean, sound, or even correct (especially not 10 years after the fact). It did work pretty well over a wide variety of test programs.
+
 ## A note about TypeScript
 
 TypeScript is commonly described as a **superset of JavaScript** in that any valid JavaScript code is theoretically also valid TypeScript. That's not exactly true because code that violates TypeScript's static typing rules triggers errors (depending on configuration), so there are many valid JavaScript programs which are not valid TypeScript programs. That being said TypeScript focuses on gradual typing and improved idioms and doesn't make as strong a statement about what parts of JavaScript are strictly excluded.
 
+## What Next?
 
+At the time, TypeScript didn't exist yet, but today the situation is different - TypeScript has evolved a lot and is one of the most popular languages out there. Still, it's wildly different from what I had in mind for Infernu, which was a minimal, ML-style language and not the Java-style route taken by TypeScript. I think there's still room for something like this, maybe a re-implementation of this type system.
+
+## References
+
+- Luis Damas and Robin Milner. *Principal type-schemes for functional programs*. POPL 1982. The classic Hindley-Milner type inference.
+- Mitchell Wand. [*Type Inference for Record Concatenation and Multiple Inheritance*](https://www.sciencedirect.com/science/article/pii/089054019190050C). Information and Computation, 1991. Row polymorphism for structural typing.
+- Jacques Guarrigue and Didier Rémy. [*Semi-Explicit First-Class Polymorphism for ML*](https://caml.inria.fr/pub/papers/garrigue_remy-poly-ic99.pdf), Information and Computation 155, 13400169 (1999)
+- Daan Leijen. [*HMF: Simple Type Inference for First-Class Polymorphism*](https://dl.acm.org/doi/10.1145/1411204.1411245). ICFP 2008. The basis for Infernu's type system.
