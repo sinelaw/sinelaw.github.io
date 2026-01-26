@@ -8,6 +8,8 @@ The piece tree doesn't actually store any data. It contains information about wh
 
 The piece tree and its accompanying StringBuffer vector are maintained by TextBuffer, a struct representing a file being displayed or edited (also tracks line ending format LF/CRLF, version counter for LSP, various flags like read only, large file, etc.) The piece tree by itself never loads data or even knows how to access the data, it accepts information from its caller and is a clean data structure decoupled from IO.
 
+Side note: Having a piece tree make it easy to implement a few features, like fault recovery - we can save only the non-file-backed buffers to disk which is fast even for huge files. Also diffing the in-memory buffer against the disk / finding modified regions for gutter markers is fast, we look for non-file-back nodes and then compare only those regions to the disk version. 
+
 TextBuffers provide a LineIterator which starts at some offset and iterates over lines by iterating over piece tree nodes and lazily loading chunks as it proceeds. It's used below during the rendering process. The lazy loading populates pieces of the TextBuffer from disk so that repeated iteration reuses the loaded data.
 
 Each text buffer can have zero or more viewports. The TextBuffer state is shared by all viewports. Each viewport represents a (possibly visible or hidden) tab in a split view on the screen. Viewports have their own separate state: cursors, scroll state, selections, etc. basically anything that we'd want to store per view rather than per underlying buffer.
@@ -40,3 +42,4 @@ For the many different highlights and indicators we extract at the start of the 
 *Reference highlighting* is the feature of showing a highlight over a symbol or word in the text where the cursor is positioned and also all other occurances of the word that are visible in the viewport. This is implemented by registering overlays in the interval tree. If the user edits the buffer, the overlays automatically stay correct, ensuring the highlighting doesn't drift during edits. This way the reference highlight overlays are only invalidated and re-created if the cursor moves to a different word, not on every render frame nor on scrolling etc.
 
 *Semantic highlighting* is an LSP feature - we ask the LSP server to provide highlighting tokens, these get translated to overlays (again, to automatically move with edits efficiently). There are two APIs: full, and range. Full gets the semantic highlighting tokens for the entire document. Range is used for the current viewport only. Full also supports "delta" API where the LSP server only reports what has changed (based on didChange events sent from Fresh to the LSP).
+
