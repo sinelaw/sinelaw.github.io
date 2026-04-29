@@ -8,7 +8,7 @@ A **piece tree** data structure represents this file. Some of the data may be in
 
 The piece tree itself doesn't actually store any data. It contains information about where the data is stored, by holding an index into an array of StringBuffers. A StringBuffer contains the memory itself (if loaded into RAM) or offset in the backing file (if not loaded into RAM). Modified / inserted bytes are stored in StringBuffers that can grow in size. This allows to reduce memory allocations by writing edits consequetively per edited region (in theory we could make it a single linear memory region but Fresh doesn't currently do that).
 
-The actual code is very similar to this:
+A simplified version of the code might look like this - the actual code is similar:
 
 ```rust
 pub enum StringBuffer {
@@ -45,13 +45,32 @@ enum PieceTreeNode {
 
 The tree structure is what enables efficient lookup & insertion: given a byte offset, we walk down the left/right nodes to reach the `Leaf` that contains the desired data. Inserts and edits are managed by splitting nodes. The tree can be rebalanced to minimize the depth.
 
-Side note: Having a piece tree made it easy to implement a few features, like fault recovery - we can save only the non-file-backed buffers to disk which is fast even for huge files. Also diffing the in-memory buffer against the disk / finding modified regions for gutter markers is fast, we look for non-file-back nodes and then compare only those regions to the disk version.
+The API includes things like:
+- `insert`, which inserts bytes by walking from the root down to the leaf where the bytes belong, splits that leaf, and updates all the ancestors back up to the root.
+- `offset_to_position` which converts a byte offset to a line number + column number.
+- `position_to_offset` which converts a line number + column number to byte offset, and `line_range` which converts line number to byte offset start/end range. Both of these work by walking the tree's nodes by line index instead of by byte offset.
+- Iterators from a given offset, etc.
 
 ### Efficient Tree Diffs
+
+Having a piece tree made it easy to implement a few features, like fault recovery - we can save only the non-file-backed buffers to disk which is fast even for huge files. Also diffing the in-memory buffer against the disk / finding modified regions for gutter markers is fast, we look for non-file-back nodes and then compare only those regions to the disk version.
 
 So imagine we want to iterate all unsaved regions in a buffer - pieces of data that were inserted or modified by the user but not yet saved to disk. We can walk the entire tree structure and find leaf nodes that point to StringBuffers that have modifications, but this will be slow if the tree is large. To speed things up, we store another copy of the tree - "the pristine tree" as it was when loaded from disk (this is called `saved_root` in the Fresh source code). We can then walk the two trees in tandem and whenever we hit a branch (`Internal`) node that has the exact same left or right branch, we can completely skip those branches and avoid iterating further down. In Fresh this is called a "structural diff". Note that tree *structure* even when the data itself is unchanged: when just loading chunks of data from disk, we update the tree nodes to point at the loaded data in that region instead of pointing at the disk. So to make the structural diff possible, we need to keep the pristine tree structure in sync with data loading operations (non-edits, where we splice in a part of the tree to point to a memory-loaded buffer instead of just saying it's on disk). This means that the pristine reference tree is mutated (replaced, actually) every time we load data from disk to memory and update the tree, just as the actual "working" tree is mutated.
 
 Furthermore, the structure may still not match 100% in regions where we modified data. A node could have been split and data edited, but the end result could be that the data in memory is actually identical to the one on disk. So to completement the structural diff we also compare byte-by-byte regions of the tree which don't match. There's a choice here - for some use cases we could just say that structure mismatches are treated as an real difference (even if the bytes are identical), for example for dumping recovery data we can just dump the region of data even if it *may* be unmodified. For other features like showing accurate diff indicators on the gutter, we would still want to compare the region, byte-by-byte.
+
+### Testing Piece Tree
+
+I'm paranoid about having a data loss or corruption bug, as I should. To sleep better at night I use property testing on the piece tree. These tests generate a set of randomized operations, apply them to the tree, and check that certain invariants are always true. Here are some of them:
+
+- Total byte count as reported by the tree is the same as all the sum of all insert/delete operations.
+- Tree is balanced, to at most some level of imbalance.
+- Insert followed by delete in the same range equals the original data.
+- Sum of all piece lengths = total tree length, and same for line numbers
+
+These are performed as property tests - the operations are generated and arbitrary, we are not testing just a single scenario or a handful of specific scenarios.
+
+More importantly: we have tests that perform a workload on a tree and an identical on a simple array, and then compares byte-by-byte the final contents as reported by the tree vs. the simple arrary.
 
 ## TextBuffer, the virtual "buffer" layer
 
