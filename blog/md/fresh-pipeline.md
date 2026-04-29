@@ -68,9 +68,9 @@ I'm paranoid about having a data loss or corruption bug, as I should. To sleep b
 - Insert followed by delete in the same range equals the original data.
 - Sum of all piece lengths = total tree length, and same for line numbers
 
-These are performed as property tests - the operations are generated and arbitrary, we are not testing just a single scenario or a handful of specific scenarios.
+At a higher level we have tests that perform a workload on a tree and an identical on a simple array, and then compares byte-by-byte the final contents as reported by the tree vs. the simple arrary. After all the splitting, balancing, node-iterating and data merging inside the tree shouldn't make a different for the end result and the two should be equal. This shows that our tree is nothing more than an optimization.
 
-More importantly: we have tests that perform a workload on a tree and an identical on a simple array, and then compares byte-by-byte the final contents as reported by the tree vs. the simple arrary.
+All these tests are executed as property tests - the operations are generated and arbitrary, we are not testing just a single scenario or a handful of specific scenarios.
 
 ## TextBuffer, the virtual "buffer" layer
 
