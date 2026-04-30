@@ -68,9 +68,9 @@ I'm paranoid about having a data loss or corruption bug, as I should. To sleep b
 - Insert followed by delete in the same range equals the original data.
 - Sum of all piece lengths = total tree length, and same for line numbers
 
-At a higher level we have tests that perform a workload on a tree and an identical on a simple array, and then compares byte-by-byte the final contents as reported by the tree vs. the simple arrary. After all the splitting, balancing, node-iterating and data merging inside the tree shouldn't make a different for the end result and the two should be equal. This shows that our tree is nothing more than an optimization.
+At a higher level I have tests that perform a workload on a tree and an identical on a simple array, and then compares byte-by-byte the final contents as reported by the tree vs. the simple arrary. After all the splitting, balancing, node-iterating and data merging inside the tree shouldn't make a different for the end result and the two should be equal. This shows that our tree is nothing more than an optimization.
 
-All these tests are executed as property tests - the operations are generated and arbitrary, we are not testing just a single scenario or a handful of specific scenarios.
+All these tests are executed as property tests - the operations are generated and arbitrary, not just a single scenario or a handful of specific scenarios.
 
 ## TextBuffer, the virtual "buffer" layer
 
@@ -78,11 +78,11 @@ The piece tree and its accompanying StringBuffer vector are maintained by TextBu
 
 TextBuffers provide a LineIterator which starts at some offset and iterates over lines by iterating over piece tree nodes and lazily loading chunks as it proceeds. It's used below during the rendering process. The lazy loading populates pieces of the TextBuffer from disk so that repeated iteration reuses the loaded data.
 
-Each text buffer can have zero or more viewports. The TextBuffer state is shared by all viewports. Each viewport represents a (possibly visible or hidden) tab in a split view on the screen. Viewports have their own separate state: cursors, scroll state, selections, etc. basically anything that we'd want to store per view rather than per underlying buffer.
+Each text buffer can have zero or more viewports. The TextBuffer state is shared by all viewports. Each viewport represents a (possibly visible or hidden) tab in a split view on the screen. Viewports have their own separate state: cursors, scroll state, selections, etc. basically anything we'd want to store per view rather than per underlying buffer.
 
 As explained below, there are many features that require annotating pieces of the text with some metadata (such as highlighting). These are called markers. Since the text is being edited, the markers are not static - they don't stay in their original offset. To avoid re-calculating highlighting, selection regions, etc. on every single keypress, in Fresh we use an **interval tree** to maintain the marker information. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID (efficiently). Between insert and query you can also feed edits like insertions or text removals, into the interval tree, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
 
-To render a viewport, we start at the top offset (maintained as an absolute byte offset) of the view and iterate over lines in the underlying buffer until we fill up the view area. Unfortunately, text does not map cleanly to screen positions. We need to incoporate styles, highlighting, variable width characters (such as tabs), decorations like LSP inlay hints (type hints) and allow plugins to insert 'virtual text' (such as git blame headers or diff filler lines). To support all these, the flow I've ended up using is:
+To render a viewport, start at the top offset (maintained as an absolute byte offset) of the view and iterate over lines in the underlying buffer until filling up the view area. Unfortunately, text does not map cleanly to screen positions. We need to incoporate styles, highlighting, variable width characters (such as tabs), decorations like LSP inlay hints (type hints) and allow plugins to insert 'virtual text' (such as git blame headers or diff filler lines). To support all these, the flow I've ended up using is:
 
 1. Input source text
 2. Tokenizer (Base tokens)
@@ -93,11 +93,11 @@ To render a viewport, we start at the top offset (maintained as an absolute byte
 
 *Tokenizer*: The tokenization converts raw input bytes into tokens: LF / CRLF to line break tokens, spaces or tabs into dedicated whitespace tokens, binary (non-text) bytes as binary tokens, and collects contiguous blocks of anything else as text tokens.
 
-*Wrapping*: After tokenization and transformations, we handle edge cases such as very long lines (think huge 1GB json file as a single line) by inserting line break tokens if line length exceeds a safety threshold (or the viewport width if soft wrapping is enabled).
+*Wrapping*: After tokenization and transformations, edge cases are handled - such as very long lines (think huge 1GB json file as a single line) by inserting line break tokens if line length exceeds a safety threshold (or the viewport width if soft wrapping is enabled).
 
-The viewport has room for a known number of lines. When processing input at the start of the pipeline we plan to fill up the number of lines in the viewport, but further along the pipeline we could end up stopping early - for example if line wrapping is enabled or if a plugin injects virtual lines or other decorations that use up vertical space.
+The viewport has room for a known number of lines, but the pipeline can't know in advance how many visual rows it will produce. For example if line wrapping is enabled or if a plugin injects virtual lines or other decorations that use up vertical space.
 
-*View transformer* is a way for plugins to arbitrarily change the stream of tokens (for example by transforming content or injecting virtual text like headers).
+*View transformer* is a way for plugins to arbitrarily change the stream of tokens (for example by transforming content or injecting virtual text like headers). I'm not sure I need it - the idea was to allow plugins to completely rewrite the token stream that gets rendered. All the use cases I had in mind are better served by other mechanisms: markdown preview, for example, uses "omit" overlays tied to specific positions in the stream, to remove markup. It's also a problematic concept to have - arbitrary plugin-dictated transformation of the view. For one, caching would break unless the plugin transformation is pure (output only depends on the input). I think I might remove the view transformer.
 
 *Line Generation* creates the `ViewLine` structures which contain the bi-directional map: source byte offset <-> visual column offset. Both directions of this mapping are needed: when we move the cursor, the movement is visual so we need to know where in the source bytes each visual location maps to. In the other direction (byte offset -> visual column), we use it to calculate cursor screen positions and handle horizontal scrolling.
 
