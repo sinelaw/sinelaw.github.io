@@ -53,7 +53,7 @@ The API includes things like:
 
 ### Efficient Tree Diffs
 
-Having a piece tree made it easy to implement a few features, like fault recovery - we can save only the non-file-backed buffers to disk which is fast even for huge files. Also diffing the in-memory buffer against the disk / finding modified regions for gutter markers is fast, we look for non-file-back nodes and then compare only those regions to the disk version.
+Having a piece tree made it easy to implement a few features, like fault recovery. To ensure unsaved data is recovered we need to store it often (every few seconds). To make this process quick we save only the non-file-backed buffers to disk which is fast even for huge files. Also diffing the in-memory buffer against the disk / finding modified regions for gutter markers is fast, we look for non-file-back nodes and then compare only those regions to the disk version.
 
 So imagine we want to iterate all unsaved regions in a buffer - pieces of data that were inserted or modified by the user but not yet saved to disk. We can walk the entire tree structure and find leaf nodes that point to StringBuffers that have modifications, but this will be slow if the tree is large. To speed things up, we store another copy of the tree - "the pristine tree" as it was when loaded from disk (this is called `saved_root` in the Fresh source code). We can then walk the two trees in tandem and whenever we hit a branch (`Internal`) node that has the exact same left or right branch, we can completely skip those branches and avoid iterating further down. In Fresh this is called a "structural diff". Note that tree *structure* even when the data itself is unchanged: when just loading chunks of data from disk, we update the tree nodes to point at the loaded data in that region instead of pointing at the disk. So to make the structural diff possible, we need to keep the pristine tree structure in sync with data loading operations (non-edits, where we splice in a part of the tree to point to a memory-loaded buffer instead of just saying it's on disk). This means that the pristine reference tree is mutated (replaced, actually) every time we load data from disk to memory and update the tree, just as the actual "working" tree is mutated.
 
@@ -63,9 +63,9 @@ Furthermore, the structure may still not match 100% in regions where we modified
 
 I'm paranoid about having a data loss or corruption bug, as I should. To sleep better at night I use property testing on the piece tree. These tests generate a set of randomized operations, apply them to the tree, and check that certain invariants are always true. Here are some of them:
 
-- Total byte count as reported by the tree is the same as all the sum of all insert/delete operations.
+- Total byte count as reported by the tree = sum of all insert/delete operations.
 - Tree is balanced, to at most some level of imbalance.
-- Insert followed by delete in the same range equals the original data.
+- Insert followed by delete in the same range = original data.
 - Sum of all piece lengths = total tree length, and same for line numbers
 
 At a higher level I have tests that perform a workload on a tree and an identical on a simple array, and then compares byte-by-byte the final contents as reported by the tree vs. the simple arrary. After all the splitting, balancing, node-iterating and data merging inside the tree shouldn't make a different for the end result and the two should be equal. This shows that our tree is nothing more than an optimization.
@@ -80,7 +80,48 @@ TextBuffers provide a LineIterator which starts at some offset and iterates over
 
 Each text buffer can have zero or more viewports. The TextBuffer state is shared by all viewports. Each viewport represents a (possibly visible or hidden) tab in a split view on the screen. Viewports have their own separate state: cursors, scroll state, selections, etc. basically anything we'd want to store per view rather than per underlying buffer.
 
-As explained below, there are many features that require annotating pieces of the text with some metadata (such as highlighting). These are called markers. Since the text is being edited, the markers are not static - they don't stay in their original offset. To avoid re-calculating highlighting, selection regions, etc. on every single keypress, in Fresh we use an **interval tree** to maintain the marker information. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID (efficiently). Between insert and query you can also feed edits like insertions or text removals, into the interval tree, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
+## Overlay Markers and the Interval Tree
+
+Many features that require annotating pieces of the text with some metadata (such as highlighting). These are called markers. Since the text is being edited, the markers are not static - they don't stay in their original offset. To avoid re-calculating highlighting, selection regions, etc. on every single keypress, in Fresh we use an **interval tree** to maintain the marker information. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID. Between insert and query you can also feed edits like insertions or text removals, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
+
+The interval tree has the following structure (adapted from real code):
+
+```rust
+struct Marker {
+    id: MarkerId,
+    interval: Interval, // absolute offset
+}
+
+struct Node {
+    marker: Marker,  // includes the marker's range in absolute offset
+    max_end: u64,    // highest offset of any marker in this subtree
+    lazy_delta: i64, // allows quick updates without traversing many nodes
+
+    parent: WeakNodePtr,
+    left: NodePtr,
+    right: NodePtr,
+}
+
+pub struct IntervalTree {
+    root: NodePtr,
+    next_id: u64,
+    /// ID-to-Node map for O(1) lookups
+    marker_map: HashMap<MarkerId, Rc<RefCell<Node>>>,
+}
+```
+
+I'll skip details like height (used for rebalancing). The basic API is:
+
+- Insert/delete markers (by offset)
+- Adjust marker offsets to account for text insertion/deletion by position and size.
+- Lookup markers in a range of offsets
+- Lookup marker by ID
+
+As the user edits their buffer, the "adjust markers" API is used by the editor to shift markers around. Using the `lazy delta` allows doing this efficiently without traversing the marker list / tree on every edit. Upon shifting offsets we find a node where the shift belongs (O(log n) search) and update `lazy_delta`. During this process we push any pre-existing deltas at ancestor nodes down to their immediate children, so we always have a clean path (zero deltas) to the root. This work of pushing deltas down is done in insert/delete markers and other operations that search down the tree.
+
+All this allows for efficient storage and querying of arbitrary metadata that shifts around as the text is edited.
+
+## Rendering
 
 To render a viewport, start at the top offset (maintained as an absolute byte offset) of the view and iterate over lines in the underlying buffer until filling up the view area. Unfortunately, text does not map cleanly to screen positions. We need to incoporate styles, highlighting, variable width characters (such as tabs), decorations like LSP inlay hints (type hints) and allow plugins to insert 'virtual text' (such as git blame headers or diff filler lines). To support all these, the flow I've ended up using is:
 
