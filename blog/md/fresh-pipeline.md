@@ -97,7 +97,7 @@ All these tests are executed as property tests - the operations are generated an
 2. Apply them on the piece tree and also on a "shadow model", a very simple analog (vector in this case)
 3. Compare the values of the tree to the value of the shadow model.
 
-The *observable state* exposed via API should be identical between the tree and the model.
+The *observable state* exposed via API should be identical between the tree and the model. Here is a pseudocode example of such a test:
 
 ```rust
 strategy InitialContent -> Vec<u8>
@@ -140,7 +140,9 @@ Each text buffer can have zero or more viewports. The TextBuffer state is shared
 
 ## Overlay Markers and the Interval Tree
 
-Several editor features require annotating pieces of the text with some metadata (such as highlighting). These are called markers. Since the text is being edited, the markers are not static - they don't stay in their original offset. To avoid re-calculating highlighting, selection regions, etc. on every single keypress, in Fresh we use an **interval tree** to maintain the marker information. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID. Between insert and query you can also feed edits like insertions or text removals, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
+Many editor features require annotating text regions. For example, selection highlighting shows a visual cue aroud the piece of text selected by the user. Error indicators decorate parts of the code that cause compilation errors, etc. These text annotations are called markers. Markers have an ID which is used to look them up in a per-feature table, and an offset in the text. As the text is edited, the markers must shift around. Markers don't stay in their original offset. 
+
+To avoid re-calculating the offset of markers (like selection regions) on every single keypress, in Fresh we use an **interval tree**. The intervale tree is used to maintain the marker offset as the text moves around. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID. Between insert and query you can also feed edits like insertions or text removals, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
 
 The interval tree has the following structure (adapted from real code):
 
@@ -177,11 +179,15 @@ I'll skip details like height (used for rebalancing). The basic API is:
 
 As the user edits their buffer, the "adjust markers" API is used by the editor to shift markers around. Using the `lazy delta` allows doing this efficiently without traversing the marker list / tree on every edit. Upon shifting offsets we find a node where the shift belongs (O(log n) search) and update `lazy_delta`. During this process we push any pre-existing deltas at ancestor nodes down to their immediate children, so we always have a clean path (zero deltas) to the root. This work of pushing deltas down is done in insert/delete markers and other operations that search down the tree.
 
+As you can see, a simple text insert/delete operation normally only searches down the tree (log N) and then updates a single field (`lazy_delta`). It doesn't need to iterate over the entire rest of the document and update all markers. 
+
+When rendering text, we need to quickly find which markers are applicable to the currently rendered text range. We seek into the interval tree and start iterating from the viewport start (an absolute offset of the first character that we render on the screen). As we iterate the text, we also iterate through the nodes of the interval tree in offset order (left to right) and collect marker IDs. When we hit a non-zero `lazy_offset` we accumulate it to the current offset so that all affecter markers are reported as having the correct, adjusted offset. 
+
 All this allows for efficient storage and querying of arbitrary metadata that shifts around as the text is edited.
 
 ## Rendering
 
-To render a viewport, start at the top offset (maintained as an absolute byte offset) of the view and iterate over lines in the underlying buffer until filling up the view area. Unfortunately, text does not map cleanly to screen positions. We need to incoporate styles, highlighting, variable width characters (such as tabs), decorations like LSP inlay hints (type hints) and allow plugins to insert 'virtual text' (such as git blame headers or diff filler lines). To support all these, the flow I've ended up using is:
+To render a viewport, start at the top offset (maintained as an absolute byte offset) of the view and iterate over lines in the underlying buffer until filling up the view area. Unfortunately, text does not map cleanly to screen positions. We need to incoporate line wrapping, styles, highlighting, variable width characters (such as tabs), decorations like LSP inlay hints (type hints) and allow plugins to insert 'virtual text' (such as git blame headers or diff filler lines). To support all these, the flow I've ended up using is:
 
 1. Input source text
 2. Tokenizer (Base tokens)
@@ -198,12 +204,30 @@ The viewport has room for a known number of lines, but the pipeline can't know i
 
 *View transformer* is a way for plugins to arbitrarily change the stream of tokens (for example by transforming content or injecting virtual text like headers). I'm not sure I need it - the idea was to allow plugins to completely rewrite the token stream that gets rendered. All the use cases I had in mind are better served by other mechanisms: markdown preview, for example, uses "omit" overlays tied to specific positions in the stream, to remove markup. It's also a problematic concept to have - arbitrary plugin-dictated transformation of the view. For one, caching would break unless the plugin transformation is pure (output only depends on the input). I think I might remove the view transformer.
 
-*Line Generation* creates the `ViewLine` structures which contain the bi-directional map: source byte offset <-> visual column offset. Both directions of this mapping are needed: when we move the cursor, the movement is visual so we need to know where in the source bytes each visual location maps to. In the other direction (byte offset -> visual column), we use it to calculate cursor screen positions and handle horizontal scrolling.
+*Line Generation* creates the `ViewLine` structures which contain the bi-directional map: source byte offset <-> visual column offset. Both directions of this mapping are needed: when we move the cursor up one line, the movement is visual so we need to know where in the source bytes each visual location maps to. In the other direction (byte offset -> visual column), we use it to calculate cursor screen positions and handle horizontal scrolling.
 
 For the many different highlights and indicators we extract at the start of the render flow the set of markers that apply to our current viewport range. We store these overlays in an array sorted by position and later reference it while rendering. I'm not sure if that's the best approach but it's to avoid multiple O(log n) lookups per each offset in the viewport.
 
 *Syntax higlighting* is currently re-calculated for every frame, but only using a subset of the full file (current viewport plus some large window of preceding text for syntax context). This is done using syntect which provides highlighting using Textmate-based grammars.
 
+For normal files, we parse the entire file with the syntax highlighter, and store two things:
+
+1. All the span information (highlight category of every symbol in the file), stored via markers in an intervale tree.
+2. A set of cached parser snapshots, once every 256 bytes. Each snapshot is the parser's state at that offset. 
+
+When the user edits the buffer, we update the interval tree to shift the markers around, and then we lookup the nearest previous parser snapshot. We then re-run the parser starting at the snapshot and continue parsing and updating the parser snapshots every 256 bytes. If we hit a snapshot that is identical to the already cached parser state at that byte offset, we can stop parsing: it means the parser has converged on an identical state as before.
+
+For large files, we don't parse the entire file, only a region surrounding the viewport. This partial parsing allows instantenous loading and display of large files with capped memory usage and low latency.
+
 *Reference highlighting* is the feature of showing a highlight over a symbol or word in the text where the cursor is positioned and also all other occurances of the word that are visible in the viewport. This is implemented by registering overlays in the interval tree. If the user edits the buffer, the overlays automatically stay correct, ensuring the highlighting doesn't drift during edits. This way the reference highlight overlays are only invalidated and re-created if the cursor moves to a different word, not on every render frame nor on scrolling etc.
 
 *Semantic highlighting* is an LSP feature - we ask the LSP server to provide highlighting tokens, these get translated to overlays (again, to automatically move with edits efficiently). There are two APIs: full, and range. Full gets the semantic highlighting tokens for the entire document. Range is used for the current viewport only. Full also supports "delta" API where the LSP server only reports what has changed (based on didChange events sent from Fresh to the LSP).
+
+## Renderer Output
+
+The renderer pipeline constructs a set of ViewLines, which are objects describing visual rows on the screen. It simultaneously iterates over the various marker trees (interval trees) in lockstep and maintains a list of currently active markers, which enter and leave this list as the iteration over the source bytes progresses. The ViewLines are composed of text spans with their final calculated decorations. The text spans also take care of accumualting unicode characters into graphemes, which are sets of characters that must be rendered in a single overlapping position on the screen (for example in Thai). Also per visual line we calculate the gutter info (various icons like "line changed in git" indicators) + line numbers.
+
+All of these visual lines are emitted in a single `LineRenderOutput` struct.
+
+The next step passes this calculated rendered output to the drawing functions, which convert it to a ratatui input and sends it off to ratatui (the excellent TUI rendering library used by Fresh).
+
