@@ -1,12 +1,25 @@
 # Rendering Pipeline in Fresh Text Editor
 
-The source file is text on disk, in UTF-8 format.
+This post walks through how the text rendering flow is built in Fresh. We'll start by listing a few requirements:
+
+- Everything should be fast and snappy - low latency input handling.
+- Keep memory usage low. For huge files - avoid loading them entirely into memory.
+- Support many on-disk file formats (text encodings: UTF variants, Windows-* and CJK formats, etc.)
+- Syntax highlighting, selection highlighting, current symbol highlighting, etc.
+- All the styling and highlighting should move naturally with the text during edits.
+- Support plugins, and allow them to customize aspects of rendering:
+    + Set arbitrary styles on text ranges
+    + Add gutter indicators (icons in the line number column area)
+    + Add "virtual text" elements inline in the text or between lines
+    + Create completely arbitrary buffers of "virtual content" managed by the plugin"
+
+These requirements lead to a few design decisions later on. We'll start with the storage layer, which achieves consistently low memory usage, even when loading huge files.
 
 ## Storage/Memory Layer: The Piece Tree
 
-A **piece tree** data structure represents this file. Some of the data may be in memory while the rest is pointed at the disk. The piece tree support a line-number index so it's relatively cheap to find an offset given a line number, or the other way around - find the byte-offset of a given line number (which is important for "go to line" features). For large files, we don't do this indexing automatically to avoid loading the entire file. We can index the lines on request (if the user wants "go to line") by streaming through the file without loading it all into memory at once. The streaming indexing also supports remote files (indexing without fetching the entire file over the network).
+A **piece tree** data structure represents contents of a file. Some of the data may be in memory, while the rest is in the file (on disk). The piece tree includes a line-number index for cheap lookup - byte offset to line number, or the other way around - find the byte offset of a given line number (which is important for "go to line" features). For large files, we don't do this indexing automatically to avoid loading the entire file. We can index the lines on request (if the user wants "go to line") by streaming through the file without loading it all into memory at once. The streaming indexing also supports remote files (indexing without fetching the entire file over the network).
 
-The piece tree itself doesn't actually store any data. It contains information about where the data is stored, by holding an index into an array of StringBuffers. A StringBuffer contains the memory itself (if loaded into RAM) or offset in the backing file (if not loaded into RAM). Modified / inserted bytes are stored in StringBuffers that can grow in size. This allows to reduce memory allocations by writing edits consequetively per edited region (in theory we could make it a single linear memory region but Fresh doesn't currently do that).
+The piece tree itself doesn't actually store any data. It contains information about where the data is stored, by holding an index into an array of StringBuffers. A StringBuffer contains the memory itself (if loaded into RAM) or offset in the backing file (if not loaded into RAM). Modified / inserted bytes are stored in StringBuffers that grow in size. These growable buffers allow reducing memory allocations by writing edits consequetively per edited region (in theory we could make it a single linear memory region but Fresh doesn't currently do that).
 
 A simplified version of the code might look like this - the actual code is similar:
 
@@ -29,8 +42,8 @@ A single StringBuffer may serve more than one node in the piece tree. The nodes 
 ```rust
 enum PieceTreeNode {
     Internal {
-        left_bytes: usize,      // Total bytes in left subtree
-        lf_left: Option<usize>, // Total newlines in left subtree
+        left_bytes: usize,          // Total bytes in left subtree
+        lines_left: Option<usize>,  // Total newlines in left subtree
         left: Arc<PieceTreeNode>,
         right: Arc<PieceTreeNode>,
     },
@@ -38,7 +51,7 @@ enum PieceTreeNode {
         location: BufferLocation,
         offset: usize,                // Offset within the buffer
         bytes: usize,                 // Number of bytes in this piece
-        line_feed_cnt: Option<usize>, // Number of line feeds in this piece
+        lines_count: Option<usize>,   // Number of line in this piece
     },
 }
 ```
@@ -55,9 +68,17 @@ The API includes things like:
 
 Having a piece tree made it easy to implement a few features, like fault recovery. To ensure unsaved data is recovered we need to store it often (every few seconds). To make this process quick we save only the non-file-backed buffers to disk which is fast even for huge files. Also diffing the in-memory buffer against the disk / finding modified regions for gutter markers is fast, we look for non-file-back nodes and then compare only those regions to the disk version.
 
-So imagine we want to iterate all unsaved regions in a buffer - pieces of data that were inserted or modified by the user but not yet saved to disk. We can walk the entire tree structure and find leaf nodes that point to StringBuffers that have modifications, but this will be slow if the tree is large. To speed things up, we store another copy of the tree - "the pristine tree" as it was when loaded from disk (this is called `saved_root` in the Fresh source code). We can then walk the two trees in tandem and whenever we hit a branch (`Internal`) node that has the exact same left or right branch, we can completely skip those branches and avoid iterating further down. In Fresh this is called a "structural diff". Note that tree *structure* even when the data itself is unchanged: when just loading chunks of data from disk, we update the tree nodes to point at the loaded data in that region instead of pointing at the disk. So to make the structural diff possible, we need to keep the pristine tree structure in sync with data loading operations (non-edits, where we splice in a part of the tree to point to a memory-loaded buffer instead of just saying it's on disk). This means that the pristine reference tree is mutated (replaced, actually) every time we load data from disk to memory and update the tree, just as the actual "working" tree is mutated.
+So imagine we want to iterate all unsaved regions in a buffer - pieces of data that were inserted or modified by the user but not yet saved to disk. We can walk the entire tree structure and find leaf nodes that point to StringBuffers that have modifications, but this will be slow if the tree is large. To speed things up, we store two copies of the tree:
+1. A "pristine tree", represents the data as it was when first opening the file on disk (this is called `saved_root` in the Fresh source code).
+2. A "working tree", which includes any modifications to the file data done in the editor.
 
-Furthermore, the structure may still not match 100% in regions where we modified data. A node could have been split and data edited, but the end result could be that the data in memory is actually identical to the one on disk. So to completement the structural diff we also compare byte-by-byte regions of the tree which don't match. There's a choice here - for some use cases we could just say that structure mismatches are treated as an real difference (even if the bytes are identical), for example for dumping recovery data we can just dump the region of data even if it *may* be unmodified. For other features like showing accurate diff indicators on the gutter, we would still want to compare the region, byte-by-byte.
+To find which parts of a file (imagine a huge file) have been modified, we walk the two trees in tandem and whenever we hit a branch (`Internal`) node that has the exact same left or right branch, we can completely skip those branches and avoid iterating further down. In Fresh this is called a "structural diff".
+
+Note that tree *structure* can change, even when the data itself is unchanged. For example, when loading chunks of data from disk, we update the tree nodes to point at the loaded data in that region instead of pointing at the disk. The tree structure changes even though there was zero change to the underlying data content, and this means we can't simply compare two trees by their structure to see if they have different data (they might have exactly the same data), which boils down to wasteful work.
+
+To make the structural diff robust, we need to keep the pristine tree structure in sync with data loading operations. The pristine reference tree that was created when we first loaded the file, is continuously mutated (replaced, actually) every time we load data from disk to memory to keep it near the same "shape" as the mutable "working" tree. With the shape-tracking updates of both the pristine tree and the working tree, they are likely to have the same structure - except for regions where the data was actually modified. When comparing the two trees we can now spend most of the algorithmic effort on the areas that are likely to contain edits and completely skip everything else.
+
+The structure may still not match 100% in regions where we modified data. A node could have been split and data edited, but the end result could be that the data in memory is actually identical to the one on disk. To complement the structural diff we also compare byte-by-byte regions of the tree which don't match. There's a choice here - for some use cases we could just say that structure mismatches are treated as an real difference (even if the bytes are identical), for example for dumping recovery data we can just dump the region of data even if it *may* be unmodified. For other features like showing accurate diff indicators on the gutter, we would still want to compare the region, byte-by-byte.
 
 ### Testing Piece Tree
 
@@ -70,19 +91,56 @@ I'm paranoid about having a data loss or corruption bug, as I should. To sleep b
 
 At a higher level I have tests that perform a workload on a tree and an identical on a simple array, and then compares byte-by-byte the final contents as reported by the tree vs. the simple arrary. After all the splitting, balancing, node-iterating and data merging inside the tree shouldn't make a different for the end result and the two should be equal. This shows that our tree is nothing more than an optimization.
 
-All these tests are executed as property tests - the operations are generated and arbitrary, not just a single scenario or a handful of specific scenarios.
+All these tests are executed as property tests - the operations are generated and arbitrary, not just a single scenario or a handful of specific scenarios. The tests follow the general pattern of the following example:
+
+1. Generate random operations
+2. Apply them on the piece tree and also on a "shadow model", a very simple analog (vector in this case)
+3. Compare the values of the tree to the value of the shadow model.
+
+The *observable state* exposed via API should be identical between the tree and the model.
+
+```rust
+strategy InitialContent -> Vec<u8>
+strategy EditOperations -> List<BufferOp> { Insert(pos, bytes), Delete(pos, len), ... }
+
+proptest roundtrip_preserves_content(
+    initial_content in InitialContent,
+    ops in EditOperations
+) {
+    let file_path = create_temp_file(initial_content);
+
+    let mut buffer = TextBuffer::load(file_path);
+    let mut shadow_vec = initial_content.clone(); // The "Oracle" source of truth
+
+    for op in ops {
+        op.apply_to_buffer(&mut buffer);
+        op.apply_to_shadow(&mut shadow_vec);
+    }
+
+    let pre_save_content = buffer.read_all();
+    assert_eq!(pre_save_content, shadow_vec, "In-memory state diverged!");
+
+    let save_path = get_new_temp_path();
+    buffer.save(save_path);
+
+    let reloaded_buffer = TextBuffer::load(save_path);
+    let reloaded_content = reloaded_buffer.read_all();
+
+    assert_eq!(reloaded_content, pre_save_content, "Save/Load roundtrip corrupted data!");
+}
+```
 
 ## TextBuffer, the virtual "buffer" layer
 
-The piece tree and its accompanying StringBuffer vector are maintained by TextBuffer, a struct representing a file being displayed or edited (also tracks line ending format LF/CRLF, version counter for LSP, various flags like read only, large file, etc.) The piece tree by itself never loads data, it accepts information from its caller and is a clean data structure decoupled from IO. The TextBuffer ties the IO side-effects with the piece tree, making it easier to test the tree in isolated memory-only property tests.
+The next layer up, built on top of the piece tree, is the TextBuffer. The piece tree and its accompanying StringBuffer vector are owned by TextBuffer. It's a struct representing a single file being displayed or edited (also tracks line ending format LF/CRLF, version counter for LSP, various flags like read only, large file, etc.) The piece tree by itself never loads data, it accepts information from its caller and is a clean data structure decoupled from IO. The TextBuffer ties the IO side-effects with the piece tree, making it easier to test the tree in isolated memory-only property tests.
 
-TextBuffers provide a LineIterator which starts at some offset and iterates over lines by iterating over piece tree nodes and lazily loading chunks as it proceeds. It's used below during the rendering process. The lazy loading populates pieces of the TextBuffer from disk so that repeated iteration reuses the loaded data.
+TextBuffers provide a LineIterator which starts at some offset (using the tree API to efficiently bisect into the correct node) and iterates over lines by iterating over piece tree nodes and lazily loading chunks as it proceeds. It's used in some example described below, during the rendering process. The lazy loading populates pieces of the TextBuffer from disk so that repeated iteration reuses the loaded data. This is one of the cases where a read only operation (just iterating lines) causes the tree to mutate - change structure - to accomodate caching.
 
 Each text buffer can have zero or more viewports. The TextBuffer state is shared by all viewports. Each viewport represents a (possibly visible or hidden) tab in a split view on the screen. Viewports have their own separate state: cursors, scroll state, selections, etc. basically anything we'd want to store per view rather than per underlying buffer.
 
 ## Overlay Markers and the Interval Tree
 
-Many features that require annotating pieces of the text with some metadata (such as highlighting). These are called markers. Since the text is being edited, the markers are not static - they don't stay in their original offset. To avoid re-calculating highlighting, selection regions, etc. on every single keypress, in Fresh we use an **interval tree** to maintain the marker information. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID. Between insert and query you can also feed edits like insertions or text removals, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
+Several editor features require annotating pieces of the text with some metadata (such as highlighting). These are called markers. Since the text is being edited, the markers are not static - they don't stay in their original offset. To avoid re-calculating highlighting, selection regions, etc. on every single keypress, in Fresh we use an **interval tree** to maintain the marker information. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID. Between insert and query you can also feed edits like insertions or text removals, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
 
 The interval tree has the following structure (adapted from real code):
 
@@ -132,7 +190,7 @@ To render a viewport, start at the top offset (maintained as an absolute byte of
 5. Line Generation (ViewLines)
 6. Styling & Rendering (Syntax/Semantic highlighting, Overlays, Selection, Cursor)
 
-*Tokenizer*: The tokenization converts raw input bytes into tokens: LF / CRLF to line break tokens, spaces or tabs into dedicated whitespace tokens, binary (non-text) bytes as binary tokens, and collects contiguous blocks of anything else as text tokens.
+*Tokenizer*: converts raw input bytes into tokens: LF / CRLF into line break tokens, spaces or tabs into dedicated whitespace tokens, binary (non-text) bytes as binary tokens. Contiguous blocks of anything else are collected into batched text tokens.
 
 *Wrapping*: After tokenization and transformations, edge cases are handled - such as very long lines (think huge 1GB json file as a single line) by inserting line break tokens if line length exceeds a safety threshold (or the viewport width if soft wrapping is enabled).
 
