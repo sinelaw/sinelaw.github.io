@@ -1,6 +1,8 @@
 # Rendering Pipeline in Fresh Text Editor
 
-This post walks through how the text rendering flow is built in Fresh. We'll start by listing a few requirements:
+I'm tried of every modern tool taking GBs of ram liberally. Fresh - the text editor and IDE - was born of this frustration. I designed it from the ground up to be memory-efficient. Althought I started from large file support, the design evolved as I added more of the features every text editor (or IDE) is expected to have. It turns out rendering text and allow users to edit it - with all the extra features - is not so simple! This post walks through how the text rendering flow is built in Fresh.
+
+We'll start by listing a few requirements:
 
 - Everything should be fast and snappy - low latency input handling.
 - Keep memory usage low. For huge files - avoid loading them entirely into memory.
@@ -230,4 +232,10 @@ The renderer pipeline constructs a set of ViewLines, which are objects describin
 All of these visual lines are emitted in a single `LineRenderOutput` struct.
 
 The next step passes this calculated rendered output to the drawing functions, which convert it to a ratatui input and sends it off to ratatui (the excellent TUI rendering library used by Fresh).
+
+## Client/Server Sessions
+
+Fresh supports running a server-mode process that retains a session, which you can detach or reattach from, using another process acting as a client. This is useful for sending "open file" commands to an already open Fresh process from another program via a cli command, such as a coding agent, or a git command that needs an editor, or a file manager (like Yazi). Another use case is reconnecting to a session you started earlier on a remote machine, if you don't want to use a terminal multiplexer like tmux (I myself use tmux extensively, but not everybody likes it). emacsclient is an example of the same feature in another text editor.
+
+Clients in Fresh are very thin. They send terminal events to the server, and receive from the server the raw rendering output - pre-rendered ANSI bytes. All the client needs to do for rendering is to set the terminal mode to raw, and pipe bytes from the server to the terminal.
 
