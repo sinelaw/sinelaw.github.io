@@ -1,6 +1,6 @@
 # The Architecture of Fresh: Memory-Efficient from the Ground Up
 
-I'm tried of every modern tool taking GBs of ram liberally. Fresh - the text editor and IDE - was born of this frustration. I designed it from the ground up to be memory-efficient. Althought I started from large file support, the design evolved as I added more of the features every text editor (or IDE) is expected to have. It turns out rendering text and allow users to edit it - with all the extra features - is not so simple! This post walks through how the text rendering flow is built in Fresh.
+I'm tired of every modern tool taking GBs of ram liberally. Fresh - the text editor and IDE - was born of this frustration. I designed it from the ground up to be memory-efficient. Fresh is not a clone of any other text editor - it's a completely new implementation. I started from huge file support, but the design evolved as I added more of the features every text editor (or IDE) is expected to have. It turns out rendering text and allowing users to edit it - with all the extra features - is not so simple! This post walks through how the text rendering flow is built in Fresh.
 
 We'll start by listing a few requirements:
 
@@ -14,6 +14,7 @@ We'll start by listing a few requirements:
     + Add gutter indicators (icons in the line number column area)
     + Add "virtual text" elements inline in the text or between lines
     + Create completely arbitrary buffers of "virtual content" managed by the plugin"
+- No bugs!
 
 These requirements lead to a few design decisions later on. We'll start with the storage layer, which achieves consistently low memory usage, even when loading huge files.
 
@@ -21,7 +22,7 @@ These requirements lead to a few design decisions later on. We'll start with the
 
 A **piece tree** data structure represents contents of a file. Some of the data may be in memory, while the rest is in the file (on disk). The piece tree includes a line-number index for cheap lookup - byte offset to line number, or the other way around - find the byte offset of a given line number (which is important for "go to line" features). For large files, we don't do this indexing automatically to avoid loading the entire file. We can index the lines on request (if the user wants "go to line") by streaming through the file without loading it all into memory at once. The streaming indexing also supports remote files (indexing without fetching the entire file over the network).
 
-The piece tree itself doesn't actually store any data. It contains information about where the data is stored, by holding an index into an array of StringBuffers. A StringBuffer contains the memory itself (if loaded into RAM) or offset in the backing file (if not loaded into RAM). Modified / inserted bytes are stored in StringBuffers that grow in size. These growable buffers allow reducing memory allocations by writing edits consequetively per edited region (in theory we could make it a single linear memory region but Fresh doesn't currently do that).
+The piece tree itself doesn't actually store any data. It contains information about where the data is stored, by holding an index into an array of StringBuffers. A StringBuffer contains the memory itself (if loaded into RAM) or offset in the backing file (if not loaded into RAM). Modified / inserted bytes are stored in StringBuffers that grow in size. These growable buffers allow reducing memory allocations by writing edits consecutively per edited region (in theory we could make it a single linear memory region but Fresh doesn't currently do that).
 
 A simplified version of the code might look like this - the actual code is similar:
 
@@ -53,7 +54,7 @@ enum PieceTreeNode {
         location: BufferLocation,
         offset: usize,                // Offset within the buffer
         bytes: usize,                 // Number of bytes in this piece
-        lines_count: Option<usize>,   // Number of line in this piece
+        lines_count: Option<usize>,   // Number of lines in this piece
     },
 }
 ```
@@ -82,7 +83,7 @@ To make the structural diff robust, we need to keep the pristine tree structure 
 
 The structure may still not match 100% in regions where we modified data. A node could have been split and data edited, but the end result could be that the data in memory is actually identical to the one on disk. To complement the structural diff we also compare byte-by-byte regions of the tree which don't match. There's a choice here - for some use cases we could just say that structure mismatches are treated as an real difference (even if the bytes are identical), for example for dumping recovery data we can just dump the region of data even if it *may* be unmodified. For other features like showing accurate diff indicators on the gutter, we would still want to compare the region, byte-by-byte.
 
-### Testing Piece Tree
+### Property Testing for Piece Tree
 
 I'm paranoid about having a data loss or corruption bug, as I should. To sleep better at night I use property testing on the piece tree. These tests generate a set of randomized operations, apply them to the tree, and check that certain invariants are always true. Here are some of them:
 
@@ -136,7 +137,7 @@ proptest roundtrip_preserves_content(
 
 The next layer up, built on top of the piece tree, is the TextBuffer. The piece tree and its accompanying StringBuffer vector are owned by TextBuffer. It's a struct representing a single file being displayed or edited (also tracks line ending format LF/CRLF, version counter for LSP, various flags like read only, large file, etc.) The piece tree by itself never loads data, it accepts information from its caller and is a clean data structure decoupled from IO. The TextBuffer ties the IO side-effects with the piece tree, making it easier to test the tree in isolated memory-only property tests.
 
-TextBuffers provide a LineIterator which starts at some offset (using the tree API to efficiently bisect into the correct node) and iterates over lines by iterating over piece tree nodes and lazily loading chunks as it proceeds. It's used in some example described below, during the rendering process. The lazy loading populates pieces of the TextBuffer from disk so that repeated iteration reuses the loaded data. This is one of the cases where a read only operation (just iterating lines) causes the tree to mutate - change structure - to accomodate caching.
+TextBuffers provide a LineIterator which starts at some offset (using the tree API to efficiently bisect into the correct node) and iterates over lines by iterating over piece tree nodes and lazily loading chunks as it proceeds. It's used in some example described below, during the rendering process. The lazy loading populates pieces of the TextBuffer from disk so that repeated iteration reuses the loaded data. This is one of the cases where a read only operation (just iterating lines) causes the tree to mutate - change structure - to accommodate caching.
 
 Each text buffer can have zero or more viewports. The TextBuffer state is shared by all viewports. Each viewport represents a (possibly visible or hidden) tab in a split view on the screen. Viewports have their own separate state: cursors, scroll state, selections, etc. basically anything we'd want to store per view rather than per underlying buffer.
 
@@ -144,7 +145,7 @@ Each text buffer can have zero or more viewports. The TextBuffer state is shared
 
 Many editor features require annotating text regions. For example, selection highlighting shows a visual cue aroud the piece of text selected by the user. Error indicators decorate parts of the code that cause compilation errors, etc. These text annotations are called markers. Markers have an ID which is used to look them up in a per-feature table, and an offset in the text. As the text is edited, the markers must shift around. Markers don't stay in their original offset. 
 
-To avoid re-calculating the offset of markers (like selection regions) on every single keypress, in Fresh we use an **interval tree**. The intervale tree is used to maintain the marker offset as the text moves around. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID. Between insert and query you can also feed edits like insertions or text removals, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
+To avoid re-calculating the offset of markers (like selection regions) on every single keypress, in Fresh we use an **interval tree**. The interval tree is used to maintain the marker offset as the text moves around. The interval tree provides an API for inserting markers by position, and then later efficiently querying their position by ID. Between insert and query you can also feed edits like insertions or text removals, which efficiently shifts the positions of all affected markers. *Overlays* are built on top of the marker interval tree, and pair start/end markers to represent self-adjusting ranges.
 
 The interval tree has the following structure (adapted from real code):
 
@@ -204,8 +205,6 @@ To render a viewport, start at the top offset (maintained as an absolute byte of
 
 The viewport has room for a known number of lines, but the pipeline can't know in advance how many visual rows it will produce. For example if line wrapping is enabled or if a plugin injects virtual lines or other decorations that use up vertical space.
 
-*View transformer* is a way for plugins to arbitrarily change the stream of tokens (for example by transforming content or injecting virtual text like headers). I'm not sure I need it - the idea was to allow plugins to completely rewrite the token stream that gets rendered. All the use cases I had in mind are better served by other mechanisms: markdown preview, for example, uses "omit" overlays tied to specific positions in the stream, to remove markup. It's also a problematic concept to have - arbitrary plugin-dictated transformation of the view. For one, caching would break unless the plugin transformation is pure (output only depends on the input). I think I might remove the view transformer.
-
 *Line Generation* creates the `ViewLine` structures which contain the bi-directional map: source byte offset <-> visual column offset. Both directions of this mapping are needed: when we move the cursor up one line, the movement is visual so we need to know where in the source bytes each visual location maps to. In the other direction (byte offset -> visual column), we use it to calculate cursor screen positions and handle horizontal scrolling.
 
 For the many different highlights and indicators we extract at the start of the render flow the set of markers that apply to our current viewport range. We store these overlays in an array sorted by position and later reference it while rendering. I'm not sure if that's the best approach but it's to avoid multiple O(log n) lookups per each offset in the viewport.
@@ -219,15 +218,23 @@ For normal files, we parse the entire file with the syntax highlighter, and stor
 
 When the user edits the buffer, we update the interval tree to shift the markers around, and then we lookup the nearest previous parser snapshot. We then re-run the parser starting at the snapshot and continue parsing and updating the parser snapshots every 256 bytes. If we hit a snapshot that is identical to the already cached parser state at that byte offset, we can stop parsing: it means the parser has converged on an identical state as before.
 
-For large files, we don't parse the entire file, only a region surrounding the viewport. This partial parsing allows instantenous loading and display of large files with capped memory usage and low latency.
+For large files, we don't parse the entire file, only a region surrounding the viewport. This partial parsing allows instantaneous loading and display of large files with capped memory usage and low latency.
 
-*Reference highlighting* is the feature of showing a highlight over a symbol or word in the text where the cursor is positioned and also all other occurances of the word that are visible in the viewport. This is implemented by registering overlays in the interval tree. If the user edits the buffer, the overlays automatically stay correct, ensuring the highlighting doesn't drift during edits. This way the reference highlight overlays are only invalidated and re-created if the cursor moves to a different word, not on every render frame nor on scrolling etc.
+*Reference highlighting* is the feature of showing a highlight over a symbol or word in the text where the cursor is positioned and also all other occurrences of the word that are visible in the viewport. This is implemented by registering overlays in the interval tree. If the user edits the buffer, the overlays automatically stay correct, ensuring the highlighting doesn't drift during edits. This way the reference highlight overlays are only invalidated and re-created if the cursor moves to a different word, not on every render frame nor on scrolling etc.
 
 *Semantic highlighting* is an LSP feature - we ask the LSP server to provide highlighting tokens, these get translated to overlays (again, to automatically move with edits efficiently). There are two APIs: full, and range. Full gets the semantic highlighting tokens for the entire document. Range is used for the current viewport only. Full also supports "delta" API where the LSP server only reports what has changed (based on didChange events sent from Fresh to the LSP).
 
+### Dead ends
+
+*View transformer* is a way for plugins to arbitrarily change the stream of tokens (for example by transforming content or injecting virtual text like headers). Honestly, I'm not sure I need it - the idea was to allow plugins to completely rewrite the token stream that gets rendered. All the use cases I had in mind are better served by other mechanisms: markdown preview, for example, uses "omit" overlays tied to specific positions in the stream, to remove markup. I also don't like the view transform because:
+1. It breaks the "everything is done incrementally" model, because it's monolithic - processes the entire viewport at every frame render.
+2. It introduces potential nondeterminism into the render flow - a plugin may return different transformation result for the same input at different times.
+
+I'll probably remove view transforms unless I find a unique use case that can't be solved in another way aside from allowing a plugin to fully transform the incoming token stream.
+
 ## Renderer Output
 
-The renderer pipeline constructs a set of ViewLines, which are objects describing visual rows on the screen. It simultaneously iterates over the various marker trees (interval trees) in lockstep and maintains a list of currently active markers, which enter and leave this list as the iteration over the source bytes progresses. The ViewLines are composed of text spans with their final calculated decorations. The text spans also take care of accumualting unicode characters into graphemes, which are sets of characters that must be rendered in a single overlapping position on the screen (for example in Thai). Also per visual line we calculate the gutter info (various icons like "line changed in git" indicators) + line numbers.
+The renderer pipeline constructs a set of ViewLines, which are objects describing visual rows on the screen. It simultaneously iterates over the various marker trees (interval trees) in lockstep and maintains a list of currently active markers, which enter and leave this list as the iteration over the source bytes progresses. The ViewLines are composed of text spans with their final calculated decorations. The text spans also take care of accumulating unicode characters into graphemes, which are sets of characters that must be rendered in a single overlapping position on the screen (for example in Thai). Also per visual line we calculate the gutter info (various icons like "line changed in git" indicators) + line numbers.
 
 All of these visual lines are emitted in a single `LineRenderOutput` struct.
 
@@ -243,8 +250,9 @@ Clients in Fresh are very thin. They send terminal events to the server, and rec
 
 Memory efficiency and low latency drive the architecture of Fresh to **only do as much work as needed**:
 
-- The piece tree data structure with optional lazy-loading support enable huge files to be loaded instantly and with minimal memory overhead. Small (i.e. normal code files) load everything to memory and benefit from the advantages.
-- The rendering pipeline only walks / evaluates the parts of the tree that are required for filling the current viewport
-- Syntax highlighting uses caching that re-synchronizes to a near checkpoint after buffer edits, and makes and effort to avoid whole-buffer reparsing. For huge files, syntax highlighting only parses a small area around the current viewport window.
-- Interval trees make it efficient to lookup / iterate / mutate sub-ranges of metadata annotations while keeping them aligned with the text by efficiently adjusting to offset shifts
+- The piece tree with optional lazy-loading support enables huge files to be loaded instantly and with minimal memory overhead. Small (i.e. normal) files load everything to memory and benefit from the advantages.
+- The rendering pipeline only walks / evaluates the parts of the tree that are required for filling the current viewport. Never the entire buffer.
+- Syntax highlighting uses caching that re-synchronizes to a near checkpoint after buffer edits, and makes an effort to avoid whole-buffer reparsing. For huge files, syntax highlighting only parses a small area around the current viewport window.
+- Interval trees make it efficient to lookup / iterate / mutate sub-ranges of metadata annotations while keeping them aligned with the text by efficiently adjusting to offset shifts.
 
+There are many other aspects the design of Fresh that may be interesting to blog about (generic settings editor, split pane system, embedded terminals and scrollback, prompts and command palettes). These all rely on the core storage and rendering pipeline.
