@@ -1,4 +1,4 @@
-# Rendering Pipeline in Fresh Text Editor
+# The Architecture of Fresh: Memory-Efficient from the Ground Up
 
 I'm tried of every modern tool taking GBs of ram liberally. Fresh - the text editor and IDE - was born of this frustration. I designed it from the ground up to be memory-efficient. Althought I started from large file support, the design evolved as I added more of the features every text editor (or IDE) is expected to have. It turns out rendering text and allow users to edit it - with all the extra features - is not so simple! This post walks through how the text rendering flow is built in Fresh.
 
@@ -238,4 +238,13 @@ The next step passes this calculated rendered output to the drawing functions, w
 Fresh supports running a server-mode process that retains a session, which you can detach or reattach from, using another process acting as a client. This is useful for sending "open file" commands to an already open Fresh process from another program via a cli command, such as a coding agent, or a git command that needs an editor, or a file manager (like Yazi). Another use case is reconnecting to a session you started earlier on a remote machine, if you don't want to use a terminal multiplexer like tmux (I myself use tmux extensively, but not everybody likes it). emacsclient is an example of the same feature in another text editor.
 
 Clients in Fresh are very thin. They send terminal events to the server, and receive from the server the raw rendering output - pre-rendered ANSI bytes. All the client needs to do for rendering is to set the terminal mode to raw, and pipe bytes from the server to the terminal.
+
+## Summary
+
+Memory efficiency and low latency drive the architecture of Fresh to **only do as much work as needed**:
+
+- The piece tree data structure with optional lazy-loading support enable huge files to be loaded instantly and with minimal memory overhead. Small (i.e. normal code files) load everything to memory and benefit from the advantages.
+- The rendering pipeline only walks / evaluates the parts of the tree that are required for filling the current viewport
+- Syntax highlighting uses caching that re-synchronizes to a near checkpoint after buffer edits, and makes and effort to avoid whole-buffer reparsing. For huge files, syntax highlighting only parses a small area around the current viewport window.
+- Interval trees make it efficient to lookup / iterate / mutate sub-ranges of metadata annotations while keeping them aligned with the text by efficiently adjusting to offset shifts
 
